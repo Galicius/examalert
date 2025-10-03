@@ -251,12 +251,12 @@ export default function App() {
               {/* Exam Type */}
               <div>
                 <Label>{t.examType}</Label>
-                <Select value={filterExamType} onValueChange={setFilterExamType}>
+                <Select value={filterExamType || "all"} onValueChange={(v) => setFilterExamType(v === "all" ? "" : v)}>
                   <SelectTrigger>
-                    <SelectValue placeholder={t.examTypeAll} />
+                    <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">{t.examTypeAll}</SelectItem>
+                    <SelectItem value="all">{t.examTypeAll}</SelectItem>
                     <SelectItem value="voznja">{t.examTypeDriving}</SelectItem>
                     <SelectItem value="teorija">{t.examTypeTheory}</SelectItem>
                   </SelectContent>
@@ -266,12 +266,12 @@ export default function App() {
               {/* Region */}
               <div>
                 <Label>{t.region}</Label>
-                <Select value={filterObmocje} onValueChange={setFilterObmocje}>
+                <Select value={filterObmocje || "all"} onValueChange={(v) => setFilterObmocje(v === "all" ? "" : v)}>
                   <SelectTrigger>
-                    <SelectValue placeholder={t.regionAll} />
+                    <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">{t.regionAll}</SelectItem>
+                    <SelectItem value="all">{t.regionAll}</SelectItem>
                     <SelectItem value="1">Območje 1</SelectItem>
                     <SelectItem value="2">Območje 2</SelectItem>
                     <SelectItem value="3">Območje 3</SelectItem>
@@ -284,12 +284,12 @@ export default function App() {
               {/* Town */}
               <div>
                 <Label>{t.town}</Label>
-                <Select value={filterTown} onValueChange={setFilterTown}>
+                <Select value={filterTown || "all"} onValueChange={(v) => setFilterTown(v === "all" ? "" : v)}>
                   <SelectTrigger>
-                    <SelectValue placeholder={t.townAll} />
+                    <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">{t.townAll}</SelectItem>
+                    <SelectItem value="all">{t.townAll}</SelectItem>
                     {uniqueTowns.map(town => (
                       <SelectItem key={town} value={town}>{town}</SelectItem>
                     ))}
