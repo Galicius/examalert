@@ -12,11 +12,12 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 const translations = {
   sl: {
     title: 'Vprašanja iz izpita',
-    subtitle: 'Delite in odkrijte vprašanja, ki so se pojavila na vozniških izpitih',
+    subtitle: 'Delite in odkrijte vprašanja, ki so se pojavila na teoretičnih izpitih',
     addQuestion: 'Dodaj vprašanje',
     backToSlots: 'Nazaj na termine',
     question: 'Vprašanje',
@@ -45,10 +46,11 @@ const translations = {
     questionAdded: 'Vprašanje uspešno dodano!',
     fillAllFields: 'Izpolnite vsa polja',
     selectCorrectAnswer: 'Izberite vsaj en pravilen odgovor',
+    addedOn: 'Dodano',
   },
   en: {
     title: 'Exam Questions',
-    subtitle: 'Share and discover questions that appeared on driving exams',
+    subtitle: 'Share and discover questions that appeared on theory exams',
     addQuestion: 'Add Question',
     backToSlots: 'Back to Slots',
     question: 'Question',
@@ -63,7 +65,7 @@ const translations = {
     loading: 'Loading...',
     noQuestions: 'No questions yet. Be the first to add one!',
     hadThisQuestion: 'I had this question',
-    didntHaveThis: 'I didn\'t have this',
+    didntHaveThis: 'I didn\'t have this question',
     likes: 'users had this',
     dislikes: 'users didn\'t have this',
     filterByType: 'Filter by type',
@@ -77,6 +79,7 @@ const translations = {
     questionAdded: 'Question successfully added!',
     fillAllFields: 'Fill all fields',
     selectCorrectAnswer: 'Select at least one correct answer',
+    addedOn: 'Added',
   }
 };
 
