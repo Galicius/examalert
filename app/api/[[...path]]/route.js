@@ -27,7 +27,11 @@ export async function GET(request) {
   if (pathname === '/api/slots') {
     try {
       await ensureDB();
-      
+    } catch (dbError) {
+      console.error('Database connection error, using mock data:', dbError.message);
+    }
+    
+    try {
       // Get last scraped time
       const metaRes = await query('SELECT last_scraped_at FROM scrape_meta WHERE id = 1');
       const lastScraped = metaRes.rows[0]?.last_scraped_at;
@@ -49,7 +53,7 @@ export async function GET(request) {
         items: slotsRes.rows
       });
     } catch (error) {
-      console.error('Error fetching slots:', error);
+      console.error('Error fetching slots, returning mock data:', error.message);
       // Return mock data for testing frontend
       return NextResponse.json({
         last_scraped_at: new Date().toISOString(),
