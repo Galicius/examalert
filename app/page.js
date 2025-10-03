@@ -170,7 +170,7 @@ export default function App() {
           filter_town: filterTown || null,
           filter_exam_type: filterExamType || null,
           filter_tolmac: filterTolmac,
-          filter_categories: filterCategories || null,
+          filter_categories: filterCategory || null,
         }),
       });
       
@@ -188,11 +188,11 @@ export default function App() {
   };
 
   const clearFilters = () => {
-    setFilterExamType('');
+    setFilterExamType('voznja');
     setFilterTolmac(false);
     setFilterObmocje('');
     setFilterTown('');
-    setFilterCategories('');
+    setFilterCategory('');
   };
 
   const filteredSlots = slots.filter(slot => {
@@ -200,11 +200,9 @@ export default function App() {
     if (filterTolmac && !slot.tolmac) return false;
     if (filterObmocje && slot.obmocje !== parseInt(filterObmocje)) return false;
     if (filterTown && slot.town !== filterTown) return false;
-    if (filterCategories && !slot.categories?.includes(filterCategories)) return false;
+    if (filterCategory && !slot.categories?.includes(filterCategory)) return false;
     return true;
   });
-
-  const uniqueTowns = [...new Set(slots.map(s => s.town).filter(Boolean))];
 
   return (
     <div className="min-h-screen bg-background text-foreground">
