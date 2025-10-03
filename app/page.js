@@ -98,13 +98,14 @@ export default function App() {
   const [slots, setSlots] = useState([]);
   const [loading, setLoading] = useState(true);
   const [lastScraped, setLastScraped] = useState(null);
+  const [viewMode, setViewMode] = useState('list'); // list, grid, compact
   
   // Filters
-  const [filterExamType, setFilterExamType] = useState('');
+  const [filterExamType, setFilterExamType] = useState('voznja'); // Default to 'voznja'
   const [filterTolmac, setFilterTolmac] = useState(false);
   const [filterObmocje, setFilterObmocje] = useState('');
   const [filterTown, setFilterTown] = useState('');
-  const [filterCategories, setFilterCategories] = useState('');
+  const [filterCategory, setFilterCategory] = useState('');
   
   // Subscription
   const [subscribeEmail, setSubscribeEmail] = useState('');
@@ -112,6 +113,25 @@ export default function App() {
   const [subscribeSuccess, setSubscribeSuccess] = useState(false);
 
   const t = translations[lang];
+
+  // Get available towns based on selected region
+  const availableTowns = useMemo(() => {
+    if (!filterObmocje) {
+      // If no region selected, get all unique towns from slots
+      return [...new Set(slots.map(s => s.town).filter(Boolean))];
+    }
+    return OBMOCJE_MAP[parseInt(filterObmocje)] || [];
+  }, [filterObmocje, slots]);
+
+  // Reset town when region changes
+  useEffect(() => {
+    if (filterObmocje && filterTown) {
+      const validTowns = OBMOCJE_MAP[parseInt(filterObmocje)] || [];
+      if (!validTowns.includes(filterTown)) {
+        setFilterTown('');
+      }
+    }
+  }, [filterObmocje, filterTown]);
 
   useEffect(() => {
     if (darkMode) {
