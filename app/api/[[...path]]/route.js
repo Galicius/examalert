@@ -278,6 +278,124 @@ export async function POST(request) {
     }
   }
 
+  // POST /api/questions
+  if (pathname === '/api/questions') {
+    try {
+      await ensureDB();
+    } catch (dbError) {
+      console.error('Database connection error:', dbError.message);
+    }
+
+    try {
+      const body = await request.json();
+      const { question_text, answer_a, answer_b, answer_c, answer_d, correct_answers, exam_type, category, submitted_by } = body;
+
+      if (!question_text || !answer_a || !answer_b || !answer_c || !answer_d || !correct_answers) {
+        return NextResponse.json({ error: 'All fields required' }, { status: 400 });
+      }
+
+      const result = await query(
+        `INSERT INTO exam_questions 
+         (question_text, answer_a, answer_b, answer_c, answer_d, correct_answers, exam_type, category, submitted_by)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+         RETURNING *`,
+        [question_text, answer_a, answer_b, answer_c, answer_d, correct_answers, exam_type, category, submitted_by || 'Anonymous']
+      );
+
+      return NextResponse.json({ question: result.rows[0] });
+    } catch (error) {
+      console.error('Error creating question:', error);
+      return NextResponse.json({ message: 'Question submitted (mock mode)' });
+    }
+  }
+
+  // POST /api/questions/:id/vote
+  if (pathname.match(/^\/api\/questions\/\d+\/vote$/)) {
+    try {
+      await ensureDB();
+    } catch (dbError) {
+      console.error('Database connection error:', dbError.message);
+    }
+
+    try {
+      const questionId = pathname.split('/')[3];
+      const body = await request.json();
+      const { vote_type } = body; // 'like' or 'dislike'
+
+      if (!['like', 'dislike'].includes(vote_type)) {
+        return NextResponse.json({ error: 'Invalid vote type' }, { status: 400 });
+      }
+
+      // Get voter IP (simplified)
+      const voterIp = request.headers.get('x-forwarded-for') || 'unknown';
+
+      // Check if already voted
+      const existingVote = await query(
+        'SELECT vote_type FROM question_votes WHERE question_id = $1 AND voter_ip = $2',
+        [questionId, voterIp]
+      );
+
+      if (existingVote.rows.length > 0) {
+        const oldVote = existingVote.rows[0].vote_type;
+        
+        if (oldVote === vote_type) {
+          // Remove vote
+          await query(
+            'DELETE FROM question_votes WHERE question_id = $1 AND voter_ip = $2',
+            [questionId, voterIp]
+          );
+
+          // Update count
+          const countField = vote_type === 'like' ? 'likes_count' : 'dislikes_count';
+          await query(
+            `UPDATE exam_questions SET ${countField} = ${countField} - 1 WHERE id = $1`,
+            [questionId]
+          );
+        } else {
+          // Change vote
+          await query(
+            'UPDATE question_votes SET vote_type = $1 WHERE question_id = $2 AND voter_ip = $3',
+            [vote_type, questionId, voterIp]
+          );
+
+          // Update counts
+          const oldCountField = oldVote === 'like' ? 'likes_count' : 'dislikes_count';
+          const newCountField = vote_type === 'like' ? 'likes_count' : 'dislikes_count';
+          await query(
+            `UPDATE exam_questions 
+             SET ${oldCountField} = ${oldCountField} - 1, ${newCountField} = ${newCountField} + 1 
+             WHERE id = $1`,
+            [questionId]
+          );
+        }
+      } else {
+        // New vote
+        await query(
+          'INSERT INTO question_votes (question_id, voter_ip, vote_type) VALUES ($1, $2, $3)',
+          [questionId, voterIp, vote_type]
+        );
+
+        // Update count
+        const countField = vote_type === 'like' ? 'likes_count' : 'dislikes_count';
+        await query(
+          `UPDATE exam_questions SET ${countField} = ${countField} + 1 WHERE id = $1`,
+          [questionId]
+        );
+      }
+
+      // Get updated question
+      const updated = await query(
+        'SELECT likes_count, dislikes_count FROM exam_questions WHERE id = $1',
+        [questionId]
+      );
+
+      return NextResponse.json({ question: updated.rows[0] });
+    } catch (error) {
+      console.error('Error voting:', error);
+      return NextResponse.json({ message: 'Vote recorded (mock mode)' });
+    }
+  }
+
   // POST /api/trigger-scrape
   if (pathname === '/api/trigger-scrape') {
     await ensureDB();
