@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { Moon, Sun, Globe, Mail, LayoutGrid, List, AlignJustify } from 'lucide-react';
+import { Moon, Sun, Globe, Mail, LayoutGrid, List, AlignJustify, MessageCircleQuestion } from 'lucide-react';
+import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
