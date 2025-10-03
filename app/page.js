@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Moon, Sun, Globe, Mail } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
+import { Moon, Sun, Globe, Mail, LayoutGrid, List, AlignJustify } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
@@ -9,6 +9,23 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+
+const OBMOCJE_MAP = {
+  1: ["Ajdovščina", "Idrija", "Ilirska Bistrica", "Koper", "Nova Gorica", "Postojna", "Sežana", "Tolmin"],
+  2: ["Domžale", "Ig", "Jesenice", "Kranj", "Ljubljana", "Vrhnika"],
+  3: ["Celje", "Laško", "Ločica ob Savinji", "Ravne na Koroškem", "Slovenske Konjice", "Slovenj Gradec", "Šentjur", "Šmarje pri Jelšah", "Trbovlje", "Velenje"],
+  4: ["Brežice", "Črnomelj", "Kočevje", "Krško", "Novo mesto", "Sevnica"],
+  5: ["Maribor", "Murska Sobota", "Ormož", "Ptuj", "Slovenska Bistrica"],
+};
+
+const CATEGORY_GROUPS = [
+  ['A', 'A1', 'A2', 'AM'],
+  ['B', 'B1', 'BE'],
+  ['C', 'C1', 'C1E', 'CE'],
+  ['D', 'D1', 'D1E', 'DE'],
+  ['F', 'G']
+];
 
 const translations = {
   sl: {
@@ -24,7 +41,6 @@ const translations = {
     examType: 'Tip izpita',
     examTypeDriving: 'Vožnja',
     examTypeTheory: 'Teorija',
-    examTypeAll: 'Vsi',
     withTranslator: 'S tolmačem',
     region: 'Območje',
     regionAll: 'Vsa območja',
@@ -38,6 +54,10 @@ const translations = {
     subscribeSuccess: 'Uspešno ste se naročili na obvestila!',
     lastUpdated: 'Zadnja posodobitev',
     slotsFound: 'najdenih terminov',
+    viewList: 'Seznam',
+    viewGrid: 'Mreža',
+    viewCompact: 'Kompaktno',
+    categoryAll: 'Vse kategorije',
   },
   en: {
     title: 'Driving Exam Slot Finder',
@@ -52,7 +72,6 @@ const translations = {
     examType: 'Exam type',
     examTypeDriving: 'Driving',
     examTypeTheory: 'Theory',
-    examTypeAll: 'All',
     withTranslator: 'With translator',
     region: 'Region',
     regionAll: 'All regions',
@@ -66,6 +85,10 @@ const translations = {
     subscribeSuccess: 'Successfully subscribed to notifications!',
     lastUpdated: 'Last updated',
     slotsFound: 'slots found',
+    viewList: 'List',
+    viewGrid: 'Grid',
+    viewCompact: 'Compact',
+    categoryAll: 'All categories',
   }
 };
 
