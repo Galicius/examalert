@@ -320,6 +320,12 @@ export default function App() {
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <h1 className="text-2xl font-bold">{t.title}</h1>
           <div className="flex items-center gap-4">
+            <Link href="/questions">
+              <Button variant="outline" size="sm">
+                <MessageCircleQuestion className="h-4 w-4 mr-2" />
+                {lang === 'sl' ? 'Vprašanja' : 'Questions'}
+              </Button>
+            </Link>
             <Button variant="ghost" size="icon" onClick={() => setLang(lang === 'sl' ? 'en' : 'sl')}>
               <Globe className="h-5 w-5" />
             </Button>
