@@ -358,11 +358,7 @@ export async function POST(request) {
 
   // POST /api/questions/:id/vote
   if (pathname.match(/^\/api\/questions\/\d+\/vote$/)) {
-    try {
-      await ensureDB();
-    } catch (dbError) {
-      console.error("Database connection error:", dbError.message);
-    }
+    await ensureDB();
 
     try {
       const questionId = pathname.split("/")[3];
@@ -446,7 +442,117 @@ export async function POST(request) {
       return NextResponse.json({ question: updated.rows[0] });
     } catch (error) {
       console.error("Error voting:", error);
-      return NextResponse.json({ message: "Vote recorded (mock mode)" });
+      return NextResponse.json(
+        { error: "Failed to record vote", message: error.message },
+        { status: 500 }
+      );
+    }
+  }
+
+  return NextResponse.json({ error: "Not found" }, { status: 404 });
+}
+
+// PUT /api/questions/:id - Update question (admin only)
+export async function PUT(request) {
+  const { pathname } = new URL(request.url);
+
+  if (pathname.match(/^\/api\/questions\/\d+$/)) {
+    // Verify admin
+    const admin = verifyAdminToken(request);
+    if (!admin) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    await ensureDB();
+
+    try {
+      const questionId = pathname.split("/")[3];
+      const body = await request.json();
+      const {
+        question_text,
+        answer_a,
+        answer_b,
+        answer_c,
+        answer_d,
+        correct_answers,
+        exam_type,
+        category,
+      } = body;
+
+      const result = await query(
+        `UPDATE exam_questions 
+         SET question_text = $1, answer_a = $2, answer_b = $3, answer_c = $4, 
+             answer_d = $5, correct_answers = $6, exam_type = $7, category = $8
+         WHERE id = $9
+         RETURNING *`,
+        [
+          question_text,
+          answer_a,
+          answer_b,
+          answer_c,
+          answer_d,
+          correct_answers,
+          exam_type,
+          category,
+          questionId,
+        ]
+      );
+
+      if (result.rows.length === 0) {
+        return NextResponse.json(
+          { error: "Question not found" },
+          { status: 404 }
+        );
+      }
+
+      return NextResponse.json({ question: result.rows[0] });
+    } catch (error) {
+      console.error("Error updating question:", error);
+      return NextResponse.json(
+        { error: "Failed to update question", message: error.message },
+        { status: 500 }
+      );
+    }
+  }
+
+  return NextResponse.json({ error: "Not found" }, { status: 404 });
+}
+
+// DELETE /api/questions/:id - Delete question (admin only)
+export async function DELETE(request) {
+  const { pathname } = new URL(request.url);
+
+  if (pathname.match(/^\/api\/questions\/\d+$/)) {
+    // Verify admin
+    const admin = verifyAdminToken(request);
+    if (!admin) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    await ensureDB();
+
+    try {
+      const questionId = pathname.split("/")[3];
+
+      const result = await query(
+        "DELETE FROM exam_questions WHERE id = $1 RETURNING id",
+        [questionId]
+      );
+
+      if (result.rows.length === 0) {
+        return NextResponse.json(
+          { error: "Question not found" },
+          { status: 404 }
+        );
+      }
+
+      return NextResponse.json({ message: "Question deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting question:", error);
+      return NextResponse.json(
+        { error: "Failed to delete question", message: error.message },
+        { status: 500 }
+      );
     }
   }
 
