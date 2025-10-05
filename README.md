@@ -195,11 +195,10 @@ MIT License - feel free to use for your own projects
 ## Support
 
 For issues related to:
-- **e-uprava website changes**: Update scraper selectors in `lib/scraper.js`
+- **External scraper API**: Check the scraper API status and logs
 - **Database issues**: Check Supabase dashboard
 - **Email delivery**: Check Resend dashboard
-- **Scheduling**: Check cron-job.org logs
 
 ---
 
-**Note**: This application scrapes publicly available data from e-uprava.gov.si. Please respect their terms of service and implement appropriate rate limiting.
+**Note**: This application displays publicly available data from e-uprava.gov.si via an external scraper API.
