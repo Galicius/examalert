@@ -1,10 +1,10 @@
 # Driving Exam Slot Finder 🚗
 
-A Next.js application for monitoring and tracking available driving and theory exam slots in Slovenia. The system scrapes data from e-uprava.gov.si and provides real-time notifications when new slots matching user preferences become available.
+A Next.js application for monitoring and tracking available driving and theory exam slots in Slovenia. The system displays data from an external scraper API and provides real-time notifications when new slots matching user preferences become available.
 
 ## Features
 
-✅ **Real-time Slot Monitoring**: Automatically scrapes exam slots every 20 minutes (day) / 1 hour (night)
+✅ **Real-time Slot Monitoring**: Displays exam slots from external scraper API
 ✅ **Advanced Filtering**: Filter by region (območje), town, exam type, translator requirement, and categories
 ✅ **Dark/Light Mode**: Toggle between dark and light themes
 ✅ **Bilingual**: Slovenian (primary) and English language support
@@ -15,10 +15,9 @@ A Next.js application for monitoring and tracking available driving and theory e
 
 - **Frontend**: Next.js 14, React, Tailwind CSS, shadcn/ui
 - **Backend**: Next.js API Routes
-- **Database**: Supabase (PostgreSQL)
+- **Database**: Supabase (PostgreSQL) - for subscriptions and questions
 - **Email**: Resend API
-- **Scraper**: Axios + Cheerio (TypeScript)
-- **Scheduling**: cron-job.org
+- **External Scraper API**: https://cppapp-v25wkpukcq-ew.a.run.app/slots_all
 
 ## Getting Started
 
