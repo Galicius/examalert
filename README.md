@@ -129,11 +129,12 @@ node -e "const {Pool} = require('pg'); const pool = new Pool({connectionString: 
 
 ## Configuration
 
-### Scraper Settings (lib/scraper.js)
+### External Scraper API
 
-- `MAX_PAGES`: Maximum pages to scrape (default: 50)
-- `MAX_DAYS_AHEAD`: How many days ahead to scrape (default: 90)
-- Request delays: 1-3 seconds between requests
+The application fetches data from: `https://cppapp-v25wkpukcq-ew.a.run.app/slots_all`
+
+Available query parameters:
+- `include_fields`: Comma-separated list of fields to include in the response
 
 ### Email Notifications
 
