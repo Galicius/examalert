@@ -26,103 +26,36 @@ export async function GET(request) {
   // GET /api/slots
   if (pathname === "/api/slots") {
     try {
-      await ensureDB();
-    } catch (dbError) {
-      console.error(
-        "Database connection error, using mock data:",
-        dbError.message
-      );
-    }
+      // Fetch from external scraper API
+      const externalApiUrl = 'https://cppapp-v25wkpukcq-ew.a.run.app/slots_all?include_fields=obmocje,town,exam_type,places_left,tolmac,created_at,updated_at,date_str,time_str,location,categories';
+      
+      const response = await fetch(externalApiUrl, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+        },
+      });
 
-    try {
-      // Get last scraped time
-      const metaRes = await query(
-        "SELECT last_scraped_at FROM scrape_meta WHERE id = 1"
-      );
-      const lastScraped = metaRes.rows[0]?.last_scraped_at;
+      if (!response.ok) {
+        throw new Error(`External API returned ${response.status}`);
+      }
 
-      // Get available slots
-      const slotsRes = await query(`
-        SELECT 
-          date_str, time_str, location, categories, obmocje, town,
-          exam_type, places_left, tolmac, created_at, updated_at
-        FROM slots
-        WHERE available = true
-        ORDER BY date_iso ASC, time_iso ASC, id ASC
-        LIMIT 500
-      `);
-
+      const data = await response.json();
+      
       return NextResponse.json({
-        last_scraped_at: lastScraped,
-        count: slotsRes.rows.length,
-        items: slotsRes.rows,
+        last_scraped_at: data.last_scraped_at || new Date().toISOString(),
+        count: data.count || data.items?.length || 0,
+        items: data.items || [],
       });
     } catch (error) {
-      console.error(
-        "Error fetching slots, returning mock data:",
-        error.message
-      );
-      // Return mock data for testing frontend
+      console.error('Error fetching slots from external API:', error.message);
+      
+      // Return empty result on error
       return NextResponse.json({
         last_scraped_at: new Date().toISOString(),
-        count: 5,
-        items: [
-          {
-            date_str: "15. 06. 2025",
-            time_str: "09:00",
-            location: "Območje 1, Ljubljana",
-            categories: "B",
-            obmocje: 1,
-            town: "Ljubljana",
-            exam_type: "voznja",
-            places_left: 3,
-            tolmac: false,
-          },
-          {
-            date_str: "16. 06. 2025",
-            time_str: "10:30",
-            location: "Območje 2, Maribor",
-            categories: "A,B",
-            obmocje: 2,
-            town: "Maribor",
-            exam_type: "teorija",
-            places_left: 5,
-            tolmac: true,
-          },
-          {
-            date_str: "17. 06. 2025",
-            time_str: "14:00",
-            location: "Območje 3, Celje",
-            categories: "B,C",
-            obmocje: 3,
-            town: "Celje",
-            exam_type: "voznja",
-            places_left: 2,
-            tolmac: false,
-          },
-          {
-            date_str: "18. 06. 2025",
-            time_str: "08:30",
-            location: "Območje 1, Ljubljana",
-            categories: "B",
-            obmocje: 1,
-            town: "Ljubljana",
-            exam_type: "teorija",
-            places_left: 4,
-            tolmac: false,
-          },
-          {
-            date_str: "19. 06. 2025",
-            time_str: "11:00",
-            location: "Območje 4, Koper",
-            categories: "A",
-            obmocje: 4,
-            town: "Koper",
-            exam_type: "voznja",
-            places_left: 1,
-            tolmac: true,
-          },
-        ],
+        count: 0,
+        items: [],
+        error: 'Failed to fetch slots from external API',
       });
     }
   }
