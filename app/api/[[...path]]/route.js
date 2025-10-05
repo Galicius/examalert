@@ -476,7 +476,7 @@ export async function POST(request) {
     }
 
     try {
-      const { scrapeSlots } = await import("@/lib/scraperpy");
+      const { scrapeSlots } = await import("@/lib/scraper");
       const slots = await scrapeSlots();
 
       const now = new Date();
