@@ -21,6 +21,22 @@ async function ensureDB() {
   }
 }
 
+// Helper function to verify admin token
+function verifyAdminToken(request) {
+  const authHeader = request.headers.get("authorization");
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return null;
+  }
+  
+  const token = authHeader.substring(7);
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || "default-secret-key");
+    return decoded;
+  } catch (error) {
+    return null;
+  }
+}
+
 // GET /api/healthz
 export async function GET(request) {
   const { pathname } = new URL(request.url);
