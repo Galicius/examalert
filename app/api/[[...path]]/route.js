@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { query, initDB } from "@/lib/db";
 import { Resend } from "resend";
 import crypto from "crypto";
+import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
 
 // Initialize Resend only if API key is available
 let resend;
