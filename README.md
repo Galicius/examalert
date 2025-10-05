@@ -89,21 +89,7 @@ The database schema is automatically created on first run. The following tables 
 3. **Set Environment Variables**: Add all env variables in Vercel project settings
 4. **Deploy**: Vercel will automatically build and deploy
 
-### Setup Scheduled Scraping with cron-job.org
-
-1. Go to [cron-job.org](https://cron-job.org) and create a free account
-2. Create a new cron job:
-   - **URL**: `https://your-app.vercel.app/api/trigger-scrape`
-   - **Schedule (Day)**: Every 20 minutes between 06:00-22:00 CET
-     - Expression: `*/20 6-22 * * *`
-   - **Schedule (Night)**: Every hour between 22:00-06:00 CET
-     - Expression: `0 22-23,0-5 * * *`
-   - **Headers**: Add custom header
-     - Name: `X-Secret`
-     - Value: `scrape_secret_8k9mP2nQ5xL7vR3wT6jF`
-3. Save and enable the cron job
-
-**Note**: You can create two separate cron jobs for day/night schedules or use a single job with a longer interval.
+**Note**: The application now uses an external scraper API, so no internal scraping setup is required.
 
 ## Usage
 
