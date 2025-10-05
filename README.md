@@ -202,4 +202,4 @@ For issues related to:
 ---
 
 **Note**: This application displays publicly available data from e-uprava.gov.si via an external scraper API.
-Making something so I can deploy
+Making something so I can deploy again
