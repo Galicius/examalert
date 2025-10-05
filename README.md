@@ -149,15 +149,17 @@ Users can unsubscribe via link in any email.
 ```
 /app
 ├── app/
-│   ├── page.js           # Main frontend
+│   ├── page.js           # Main frontend (slot finder)
+│   ├── questions/        # Exam questions page
 │   ├── layout.js         # Root layout
 │   ├── globals.css       # Global styles
 │   └── api/
 │       └── [[...path]]/route.js  # API routes
 ├── lib/
 │   ├── db.js             # Database utilities
-│   └── scraper.js        # Scraper logic
+│   └── utils.js          # Utility functions
 ├── components/ui/        # shadcn components
+├── hooks/                # React hooks
 ├── .env                  # Environment variables
 └── package.json          # Dependencies
 ```
