@@ -73,13 +73,12 @@ The database schema is automatically created on first run. The following tables 
 ### Public Endpoints
 
 - `GET /api/healthz` - Health check
-- `GET /api/slots` - Get available slots (returns mock data if DB unavailable)
+- `GET /api/slots` - Get available slots from external scraper API
 - `POST /api/subscribe` - Subscribe to email notifications
 - `GET /api/unsubscribe?token=XXX` - Unsubscribe from notifications
-
-### Protected Endpoints
-
-- `POST /api/trigger-scrape` - Trigger scraping (requires `X-Secret` header)
+- `GET /api/questions` - Get exam questions
+- `POST /api/questions` - Submit new exam question
+- `POST /api/questions/:id/vote` - Vote on a question (like/dislike)
 
 ## Deployment
 
