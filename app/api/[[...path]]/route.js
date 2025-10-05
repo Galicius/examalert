@@ -107,13 +107,18 @@ export async function GET(request) {
     }
   }
 
+  // GET /api/admin/verify - Verify admin token
+  if (pathname === "/api/admin/verify") {
+    const admin = verifyAdminToken(request);
+    if (!admin) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    return NextResponse.json({ valid: true, username: admin.username });
+  }
+
   // GET /api/questions
   if (pathname === "/api/questions") {
-    try {
-      await ensureDB();
-    } catch (dbError) {
-      console.error("Database connection error:", dbError.message);
-    }
+    await ensureDB();
 
     try {
       const url = new URL(request.url);
@@ -148,41 +153,10 @@ export async function GET(request) {
       return NextResponse.json({ questions: result.rows });
     } catch (error) {
       console.error("Error fetching questions:", error);
-      // Return mock data
-      return NextResponse.json({
-        questions: [
-          {
-            id: 1,
-            question_text: "Katera je maksimalna dovoljena hitrost v naselju?",
-            answer_a: "50 km/h",
-            answer_b: "60 km/h",
-            answer_c: "70 km/h",
-            answer_d: "80 km/h",
-            correct_answers: "A",
-            exam_type: "teorija",
-            category: "B",
-            submitted_by: "Uporabnik",
-            created_at: new Date().toISOString(),
-            likes_count: 15,
-            dislikes_count: 2,
-          },
-          {
-            id: 2,
-            question_text: "Kdaj morate prižgati luči na vozilu?",
-            answer_a: "Samo ponoči",
-            answer_b: "Vedno",
-            answer_c: "Pri slabi vidljivosti",
-            answer_d: "Nikoli",
-            correct_answers: "B,C",
-            exam_type: "teorija",
-            category: "B",
-            submitted_by: "Uporabnik",
-            created_at: new Date().toISOString(),
-            likes_count: 8,
-            dislikes_count: 1,
-          },
-        ],
-      });
+      return NextResponse.json(
+        { error: "Failed to fetch questions", message: error.message },
+        { status: 500 }
+      );
     }
   }
 
