@@ -183,10 +183,10 @@ Users can unsubscribe via link in any email.
 - Check Resend dashboard for errors
 - Ensure "from" email is configured in Resend
 
-### Scraping Not Working
-- Check cron-job.org logs
-- Verify secret token matches
-- Check application logs in Vercel
+### Slots Not Loading
+- Verify external scraper API is accessible
+- Check browser console for errors
+- Ensure API endpoint is correct in code
 
 ## License
 
