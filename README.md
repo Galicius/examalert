@@ -105,12 +105,14 @@ The database schema is automatically created on first run. The following tables 
 3. Click "Subscribe to notifications" to get email alerts
 4. Receive emails when new matching slots appear
 
-### Testing the Scraper
+### Testing the API
 
 ```bash
-# Trigger scraping manually (requires secret)
-curl -X POST https://your-app.vercel.app/api/trigger-scrape \
-  -H "X-Secret: scrape_secret_8k9mP2nQ5xL7vR3wT6jF"
+# Get available slots
+curl https://your-app.vercel.app/api/slots
+
+# Or test the external scraper API directly
+curl "https://cppapp-v25wkpukcq-ew.a.run.app/slots_all?include_fields=obmocje,town,exam_type,places_left,tolmac,created_at,updated_at,date_str,time_str,location,categories"
 ```
 
 ## Database Connection Issue
