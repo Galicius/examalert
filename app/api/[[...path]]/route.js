@@ -298,11 +298,7 @@ export async function POST(request) {
 
   // POST /api/questions
   if (pathname === "/api/questions") {
-    try {
-      await ensureDB();
-    } catch (dbError) {
-      console.error("Database connection error:", dbError.message);
-    }
+    await ensureDB();
 
     try {
       const body = await request.json();
@@ -353,7 +349,10 @@ export async function POST(request) {
       return NextResponse.json({ question: result.rows[0] });
     } catch (error) {
       console.error("Error creating question:", error);
-      return NextResponse.json({ message: "Question submitted (mock mode)" });
+      return NextResponse.json(
+        { error: "Failed to create question", message: error.message },
+        { status: 500 }
+      );
     }
   }
 
