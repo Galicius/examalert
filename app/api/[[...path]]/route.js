@@ -163,9 +163,65 @@ export async function GET(request) {
   return NextResponse.json({ error: "Not found" }, { status: 404 });
 }
 
-// POST /api/subscribe
+// POST handlers
 export async function POST(request) {
   const { pathname } = new URL(request.url);
+
+  // POST /api/admin/login - Admin login
+  if (pathname === "/api/admin/login") {
+    await ensureDB();
+
+    try {
+      const body = await request.json();
+      const { username, password } = body;
+
+      if (!username || !password) {
+        return NextResponse.json(
+          { error: "Username and password required" },
+          { status: 400 }
+        );
+      }
+
+      // Get admin user from database
+      const result = await query(
+        "SELECT id, username, password_hash FROM admin_users WHERE username = $1",
+        [username]
+      );
+
+      if (result.rows.length === 0) {
+        return NextResponse.json(
+          { error: "Invalid credentials" },
+          { status: 401 }
+        );
+      }
+
+      const admin = result.rows[0];
+
+      // Verify password
+      const validPassword = await bcrypt.compare(password, admin.password_hash);
+      if (!validPassword) {
+        return NextResponse.json(
+          { error: "Invalid credentials" },
+          { status: 401 }
+        );
+      }
+
+      // Generate JWT token
+      const token = jwt.sign(
+        { id: admin.id, username: admin.username },
+        process.env.JWT_SECRET || "default-secret-key",
+        { expiresIn: "24h" }
+      );
+
+      return NextResponse.json({ token, username: admin.username });
+    } catch (error) {
+      console.error("Error logging in:", error);
+      return NextResponse.json(
+        { error: "Login failed" },
+        { status: 500 }
+      );
+    }
+  }
 
   if (pathname === "/api/subscribe") {
     await ensureDB();
