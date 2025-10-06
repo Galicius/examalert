@@ -5,6 +5,10 @@ import crypto from "crypto";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 
+export const runtime = 'nodejs';         // force Node, not Edge
+export const dynamic = 'force-dynamic';  // avoid caching of API responses
+
+
 // Initialize Resend only if API key is available
 let resend;
 if (process.env.RESEND_API_KEY) {
