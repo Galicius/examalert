@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Moon, Sun, Globe, Plus, ThumbsUp, ThumbsDown, Calendar, CheckCircle } from 'lucide-react';
+import { Moon, Sun, Globe, Plus, ThumbsUp, ThumbsDown, Calendar, CheckCircle, LogIn, Users } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -13,6 +13,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { useAuth } from '@/lib/auth';
+import { AuthDialog } from '@/components/auth-dialog';
 
 const translations = {
   sl: {
