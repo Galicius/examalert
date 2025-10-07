@@ -522,8 +522,17 @@ export async function POST(request) {
     }
   }
 
-  // POST /api/questions
+  // POST /api/questions (protected - requires authentication)
   if (pathname === "/api/questions") {
+    // Verify user is authenticated
+    const user = verifyUserToken(request);
+    if (!user) {
+      return NextResponse.json(
+        { error: "Authentication required" },
+        { status: 401 }
+      );
+    }
+
     await ensureDB();
 
     try {
@@ -537,7 +546,6 @@ export async function POST(request) {
         correct_answers,
         exam_type,
         category,
-        submitted_by,
       } = body;
 
       if (
@@ -568,7 +576,7 @@ export async function POST(request) {
           correct_answers,
           exam_type,
           category,
-          submitted_by || "Anonymous",
+          user.username, // Use authenticated user's username
         ]
       );
 
@@ -577,6 +585,167 @@ export async function POST(request) {
       console.error("Error creating question:", error);
       return NextResponse.json(
         { error: "Failed to create question", message: error.message },
+        { status: 500 }
+      );
+    }
+  }
+
+  // POST /api/learning/sessions/join - Join a learning session
+  if (pathname === "/api/learning/sessions/join") {
+    const user = verifyUserToken(request);
+    if (!user) {
+      return NextResponse.json(
+        { error: "Authentication required" },
+        { status: 401 }
+      );
+    }
+
+    await ensureDB();
+
+    try {
+      const body = await request.json();
+      const { session_id, note } = body;
+
+      if (!session_id) {
+        return NextResponse.json(
+          { error: "Session ID required" },
+          { status: 400 }
+        );
+      }
+
+      // Check if session is full
+      const participantsCount = await query(
+        "SELECT COUNT(*) as count FROM session_participants WHERE session_id = $1",
+        [session_id]
+      );
+
+      if (parseInt(participantsCount.rows[0].count) >= 5) {
+        return NextResponse.json(
+          { error: "Session is full" },
+          { status: 400 }
+        );
+      }
+
+      // Check if already joined
+      const existing = await query(
+        "SELECT id FROM session_participants WHERE session_id = $1 AND user_id = $2",
+        [session_id, user.id]
+      );
+
+      if (existing.rows.length > 0) {
+        return NextResponse.json(
+          { error: "Already joined this session" },
+          { status: 400 }
+        );
+      }
+
+      // Join session
+      await query(
+        `INSERT INTO session_participants (session_id, user_id, note)
+         VALUES ($1, $2, $3)`,
+        [session_id, user.id, note || null]
+      );
+
+      return NextResponse.json({ message: "Successfully joined session" });
+    } catch (error) {
+      console.error("Error joining session:", error);
+      return NextResponse.json(
+        { error: "Failed to join session", message: error.message },
+        { status: 500 }
+      );
+    }
+  }
+
+  // POST /api/learning/sessions/leave - Leave a learning session
+  if (pathname === "/api/learning/sessions/leave") {
+    const user = verifyUserToken(request);
+    if (!user) {
+      return NextResponse.json(
+        { error: "Authentication required" },
+        { status: 401 }
+      );
+    }
+
+    await ensureDB();
+
+    try {
+      const body = await request.json();
+      const { session_id } = body;
+
+      if (!session_id) {
+        return NextResponse.json(
+          { error: "Session ID required" },
+          { status: 400 }
+        );
+      }
+
+      // Leave session
+      const result = await query(
+        "DELETE FROM session_participants WHERE session_id = $1 AND user_id = $2 RETURNING id",
+        [session_id, user.id]
+      );
+
+      if (result.rows.length === 0) {
+        return NextResponse.json(
+          { error: "Not joined in this session" },
+          { status: 400 }
+        );
+      }
+
+      return NextResponse.json({ message: "Successfully left session" });
+    } catch (error) {
+      console.error("Error leaving session:", error);
+      return NextResponse.json(
+        { error: "Failed to leave session", message: error.message },
+        { status: 500 }
+      );
+    }
+  }
+
+  // POST /api/learning/sessions/note - Update note for a session
+  if (pathname === "/api/learning/sessions/note") {
+    const user = verifyUserToken(request);
+    if (!user) {
+      return NextResponse.json(
+        { error: "Authentication required" },
+        { status: 401 }
+      );
+    }
+
+    await ensureDB();
+
+    try {
+      const body = await request.json();
+      const { session_id, note } = body;
+
+      if (!session_id) {
+        return NextResponse.json(
+          { error: "Session ID required" },
+          { status: 400 }
+        );
+      }
+
+      // Update note
+      const result = await query(
+        `UPDATE session_participants 
+         SET note = $1 
+         WHERE session_id = $2 AND user_id = $3
+         RETURNING id`,
+        [note || null, session_id, user.id]
+      );
+
+      if (result.rows.length === 0) {
+        return NextResponse.json(
+          { error: "Not joined in this session" },
+          { status: 400 }
+        );
+      }
+
+      return NextResponse.json({ message: "Note updated successfully" });
+    } catch (error) {
+      console.error("Error updating note:", error);
+      return NextResponse.json(
+        { error: "Failed to update note", message: error.message },
         { status: 500 }
       );
     }
