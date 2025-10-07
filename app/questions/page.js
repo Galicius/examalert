@@ -113,6 +113,7 @@ export default function QuestionsPage() {
   const [questions, setQuestions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [authDialogOpen, setAuthDialogOpen] = useState(false);
   const [filterExamType, setFilterExamType] = useState('');
   const [filterCategory, setFilterCategory] = useState('');
 
@@ -128,16 +129,27 @@ export default function QuestionsPage() {
   const [correctD, setCorrectD] = useState(false);
   const [examType, setExamType] = useState('teorija');
   const [category, setCategory] = useState('B');
-  const [submittedBy, setSubmittedBy] = useState('');
   const [submitSuccess, setSubmitSuccess] = useState(false);
 
+  const { user, isAuthenticated, getAuthHeaders } = useAuth();
   const t = translations[lang];
 
+  // Load theme from localStorage on mount
+  useEffect(() => {
+    const savedTheme = localStorage.getItem('theme');
+    if (savedTheme === 'dark') {
+      setDarkMode(true);
+    }
+  }, []);
+
+  // Save theme to localStorage and apply
   useEffect(() => {
     if (darkMode) {
       document.documentElement.classList.add('dark');
+      localStorage.setItem('theme', 'dark');
     } else {
       document.documentElement.classList.remove('dark');
+      localStorage.setItem('theme', 'light');
     }
   }, [darkMode]);
 
