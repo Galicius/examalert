@@ -115,6 +115,14 @@ export default function App() {
 
   const t = translations[lang];
 
+  // Load theme from localStorage on mount
+  useEffect(() => {
+    const savedTheme = localStorage.getItem('theme');
+    if (savedTheme === 'dark') {
+      setDarkMode(true);
+    }
+  }, []);
+
   // Get available towns based on selected region
   const availableTowns = useMemo(() => {
     if (!filterObmocje) {
