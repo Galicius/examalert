@@ -539,6 +539,12 @@ export default function QuestionsPage() {
           </div>
         )}
       </main>
+
+      <AuthDialog 
+        open={authDialogOpen} 
+        onOpenChange={setAuthDialogOpen} 
+        translations={t}
+      />
     </div>
   );
 }
