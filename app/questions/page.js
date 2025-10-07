@@ -446,7 +446,6 @@ export default function QuestionsPage() {
               )}
             </DialogContent>
           </Dialog>
-        </div>
 
         {/* Questions List */}
         {loading ? (
