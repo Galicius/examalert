@@ -102,7 +102,7 @@
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
 
-user_problem_statement: "User requested to stop using the internal scraper and instead use an external scraper API at https://cppapp-v25wkpukcq-ew.a.run.app/slots_all. The external API provides all required fields for the frontend."
+user_problem_statement: "Added new features: 1) Learning page with time slots (16:00, 18:00, 20:00) where users can join study sessions (max 5 per slot), 2) User authentication system (login/register with email, username, password), 3) Protected questions feature (only logged-in users can add questions), 4) Fixed theme persistence across pages, 5) Improved mobile responsiveness."
 
 backend:
   - task: "Integrate external scraper API"
