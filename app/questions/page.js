@@ -49,6 +49,16 @@ const translations = {
     fillAllFields: 'Izpolnite vsa polja',
     selectCorrectAnswer: 'Izberite vsaj en pravilen odgovor',
     addedOn: 'Dodano',
+    loginRequired: 'Prijava potrebna',
+    loginToAdd: 'Prijavite se za dodajanje vprašanj',
+    authTitle: 'Prijava / Registracija',
+    authDescription: 'Prijavite se ali se registrirajte za dodajanje vprašanj',
+    email: 'E-pošta',
+    username: 'Uporabniško ime',
+    password: 'Geslo',
+    login: 'Prijava',
+    register: 'Registracija',
+    learning: 'Učenje',
   },
   en: {
     title: 'Exam Questions',
@@ -82,6 +92,16 @@ const translations = {
     fillAllFields: 'Fill all fields',
     selectCorrectAnswer: 'Select at least one correct answer',
     addedOn: 'Added',
+    loginRequired: 'Login required',
+    loginToAdd: 'Login to add questions',
+    authTitle: 'Login / Register',
+    authDescription: 'Login or register to add questions',
+    email: 'Email',
+    username: 'Username',
+    password: 'Password',
+    login: 'Login',
+    register: 'Register',
+    learning: 'Learning',
   }
 };
 
