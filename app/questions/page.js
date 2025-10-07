@@ -275,24 +275,32 @@ export default function QuestionsPage() {
     <div className="min-h-screen bg-background text-foreground">
       {/* Header */}
       <header className="border-b border-border bg-card">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold">{t.title}</h1>
-            <p className="text-sm text-muted-foreground">{t.subtitle}</p>
-          </div>
-          <div className="flex items-center gap-4">
-            <Link href="/">
-              <Button variant="outline" size="sm">
-                <Calendar className="h-4 w-4 mr-2" />
-                {t.backToSlots}
+        <div className="container mx-auto px-4 py-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <h1 className="text-2xl font-bold">{t.title}</h1>
+              <p className="text-sm text-muted-foreground">{t.subtitle}</p>
+            </div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <Link href="/">
+                <Button variant="outline" size="sm">
+                  <Calendar className="h-4 w-4 mr-2" />
+                  <span className="hidden sm:inline">{t.backToSlots}</span>
+                </Button>
+              </Link>
+              <Link href="/learning">
+                <Button variant="outline" size="sm">
+                  <Users className="h-4 w-4 mr-2" />
+                  <span className="hidden sm:inline">{t.learning}</span>
+                </Button>
+              </Link>
+              <Button variant="ghost" size="icon" onClick={() => setLang(lang === 'sl' ? 'en' : 'sl')}>
+                <Globe className="h-5 w-5" />
               </Button>
-            </Link>
-            <Button variant="ghost" size="icon" onClick={() => setLang(lang === 'sl' ? 'en' : 'sl')}>
-              <Globe className="h-5 w-5" />
-            </Button>
-            <Button variant="ghost" size="icon" onClick={() => setDarkMode(!darkMode)}>
-              {darkMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
-            </Button>
+              <Button variant="ghost" size="icon" onClick={() => setDarkMode(!darkMode)}>
+                {darkMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+              </Button>
+            </div>
           </div>
         </div>
       </header>
