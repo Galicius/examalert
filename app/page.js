@@ -141,11 +141,14 @@ export default function App() {
     }
   }, [filterObmocje, filterTown]);
 
+  // Save theme to localStorage and apply
   useEffect(() => {
     if (darkMode) {
       document.documentElement.classList.add('dark');
+      localStorage.setItem('theme', 'dark');
     } else {
       document.documentElement.classList.remove('dark');
+      localStorage.setItem('theme', 'light');
     }
   }, [darkMode]);
 
