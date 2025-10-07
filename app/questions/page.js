@@ -245,7 +245,14 @@ export default function QuestionsPage() {
     setCorrectD(false);
     setExamType('teorija');
     setCategory('B');
-    setSubmittedBy('');
+  };
+
+  const handleAddQuestionClick = () => {
+    if (!isAuthenticated) {
+      setAuthDialogOpen(true);
+    } else {
+      setDialogOpen(true);
+    }
   };
 
   const handleVote = async (questionId, voteType) => {
