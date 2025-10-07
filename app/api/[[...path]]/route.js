@@ -136,6 +136,15 @@ export async function GET(request) {
     return NextResponse.json({ valid: true, username: admin.username });
   }
 
+  // GET /api/auth/verify - Verify user token
+  if (pathname === "/api/auth/verify") {
+    const user = verifyUserToken(request);
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    return NextResponse.json({ valid: true, id: user.id, username: user.username, email: user.email });
+  }
+
   // GET /api/questions
   if (pathname === "/api/questions") {
     await ensureDB();
@@ -175,6 +184,67 @@ export async function GET(request) {
       console.error("Error fetching questions:", error);
       return NextResponse.json(
         { error: "Failed to fetch questions", message: error.message },
+        { status: 500 }
+      );
+    }
+  }
+
+  // GET /api/learning/sessions - Get learning sessions for a date
+  if (pathname === "/api/learning/sessions") {
+    await ensureDB();
+
+    try {
+      const url = new URL(request.url);
+      const date = url.searchParams.get("date"); // Format: YYYY-MM-DD
+
+      if (!date) {
+        return NextResponse.json(
+          { error: "Date parameter required" },
+          { status: 400 }
+        );
+      }
+
+      // Define the three time slots
+      const timeSlots = ['16:00:00', '18:00:00', '20:00:00'];
+      const sessions = [];
+
+      for (const timeSlot of timeSlots) {
+        // Ensure session exists
+        const sessionResult = await query(
+          `INSERT INTO learning_sessions (session_date, session_time)
+           VALUES ($1, $2)
+           ON CONFLICT (session_date, session_time) DO UPDATE SET session_date = $1
+           RETURNING id`,
+          [date, timeSlot]
+        );
+        
+        const sessionId = sessionResult.rows[0].id;
+
+        // Get participants
+        const participantsResult = await query(
+          `SELECT sp.id, sp.note, sp.joined_at, u.username, u.email
+           FROM session_participants sp
+           JOIN users u ON sp.user_id = u.id
+           WHERE sp.session_id = $1
+           ORDER BY sp.joined_at ASC`,
+          [sessionId]
+        );
+
+        sessions.push({
+          id: sessionId,
+          date,
+          time: timeSlot.substring(0, 5), // Format as HH:MM
+          participants: participantsResult.rows,
+          availableSpots: Math.max(0, 5 - participantsResult.rows.length),
+          isFull: participantsResult.rows.length >= 5
+        });
+      }
+
+      return NextResponse.json({ sessions });
+    } catch (error) {
+      console.error("Error fetching learning sessions:", error);
+      return NextResponse.json(
+        { error: "Failed to fetch sessions", message: error.message },
         { status: 500 }
       );
     }
