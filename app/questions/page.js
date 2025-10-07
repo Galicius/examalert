@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Moon, Sun, Globe, Plus, ThumbsUp, ThumbsDown, Calendar, CheckCircle } from 'lucide-react';
+import { Moon, Sun, Globe, Plus, ThumbsUp, ThumbsDown, Calendar, CheckCircle, LogIn, Users } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -13,6 +13,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { useAuth } from '@/lib/auth';
+import { AuthDialog } from '@/components/auth-dialog';
 
 const translations = {
   sl: {
@@ -47,6 +49,16 @@ const translations = {
     fillAllFields: 'Izpolnite vsa polja',
     selectCorrectAnswer: 'Izberite vsaj en pravilen odgovor',
     addedOn: 'Dodano',
+    loginRequired: 'Prijava potrebna',
+    loginToAdd: 'Prijavite se za dodajanje vprašanj',
+    authTitle: 'Prijava / Registracija',
+    authDescription: 'Prijavite se ali se registrirajte za dodajanje vprašanj',
+    email: 'E-pošta',
+    username: 'Uporabniško ime',
+    password: 'Geslo',
+    login: 'Prijava',
+    register: 'Registracija',
+    learning: 'Učenje',
   },
   en: {
     title: 'Exam Questions',
@@ -80,6 +92,16 @@ const translations = {
     fillAllFields: 'Fill all fields',
     selectCorrectAnswer: 'Select at least one correct answer',
     addedOn: 'Added',
+    loginRequired: 'Login required',
+    loginToAdd: 'Login to add questions',
+    authTitle: 'Login / Register',
+    authDescription: 'Login or register to add questions',
+    email: 'Email',
+    username: 'Username',
+    password: 'Password',
+    login: 'Login',
+    register: 'Register',
+    learning: 'Learning',
   }
 };
 
@@ -91,6 +113,7 @@ export default function QuestionsPage() {
   const [questions, setQuestions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [authDialogOpen, setAuthDialogOpen] = useState(false);
   const [filterExamType, setFilterExamType] = useState('');
   const [filterCategory, setFilterCategory] = useState('');
 
@@ -106,16 +129,27 @@ export default function QuestionsPage() {
   const [correctD, setCorrectD] = useState(false);
   const [examType, setExamType] = useState('teorija');
   const [category, setCategory] = useState('B');
-  const [submittedBy, setSubmittedBy] = useState('');
   const [submitSuccess, setSubmitSuccess] = useState(false);
 
+  const { user, isAuthenticated, getAuthHeaders } = useAuth();
   const t = translations[lang];
 
+  // Load theme from localStorage on mount
+  useEffect(() => {
+    const savedTheme = localStorage.getItem('theme');
+    if (savedTheme === 'dark') {
+      setDarkMode(true);
+    }
+  }, []);
+
+  // Save theme to localStorage and apply
   useEffect(() => {
     if (darkMode) {
       document.documentElement.classList.add('dark');
+      localStorage.setItem('theme', 'dark');
     } else {
       document.documentElement.classList.remove('dark');
+      localStorage.setItem('theme', 'light');
     }
   }, [darkMode]);
 
@@ -141,6 +175,11 @@ export default function QuestionsPage() {
   };
 
   const handleSubmit = async () => {
+    if (!isAuthenticated) {
+      setAuthDialogOpen(true);
+      return;
+    }
+
     if (!questionText || !answerA || !answerB || !answerC || !answerD) {
       alert(t.fillAllFields);
       return;
@@ -160,7 +199,10 @@ export default function QuestionsPage() {
     try {
       const res = await fetch('/api/questions', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          ...getAuthHeaders()
+        },
         body: JSON.stringify({
           question_text: questionText,
           answer_a: answerA,
@@ -170,7 +212,6 @@ export default function QuestionsPage() {
           correct_answers: correctAnswers.join(','),
           exam_type: examType,
           category,
-          submitted_by: submittedBy || 'Anonymous'
         }),
       });
 
@@ -182,9 +223,13 @@ export default function QuestionsPage() {
           resetForm();
           fetchQuestions();
         }, 1500);
+      } else {
+        const data = await res.json();
+        alert(data.error || 'Failed to submit question');
       }
     } catch (error) {
       console.error('Error submitting question:', error);
+      alert('Failed to submit question');
     }
   };
 
@@ -200,7 +245,14 @@ export default function QuestionsPage() {
     setCorrectD(false);
     setExamType('teorija');
     setCategory('B');
-    setSubmittedBy('');
+  };
+
+  const handleAddQuestionClick = () => {
+    if (!isAuthenticated) {
+      setAuthDialogOpen(true);
+    } else {
+      setDialogOpen(true);
+    }
   };
 
   const handleVote = async (questionId, voteType) => {
@@ -223,34 +275,42 @@ export default function QuestionsPage() {
     <div className="min-h-screen bg-background text-foreground">
       {/* Header */}
       <header className="border-b border-border bg-card">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold">{t.title}</h1>
-            <p className="text-sm text-muted-foreground">{t.subtitle}</p>
-          </div>
-          <div className="flex items-center gap-4">
-            <Link href="/">
-              <Button variant="outline" size="sm">
-                <Calendar className="h-4 w-4 mr-2" />
-                {t.backToSlots}
+        <div className="container mx-auto px-4 py-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <h1 className="text-2xl font-bold">{t.title}</h1>
+              <p className="text-sm text-muted-foreground">{t.subtitle}</p>
+            </div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <Link href="/">
+                <Button variant="outline" size="sm">
+                  <Calendar className="h-4 w-4 mr-2" />
+                  <span className="hidden sm:inline">{t.backToSlots}</span>
+                </Button>
+              </Link>
+              <Link href="/learning">
+                <Button variant="outline" size="sm">
+                  <Users className="h-4 w-4 mr-2" />
+                  <span className="hidden sm:inline">{t.learning}</span>
+                </Button>
+              </Link>
+              <Button variant="ghost" size="icon" onClick={() => setLang(lang === 'sl' ? 'en' : 'sl')}>
+                <Globe className="h-5 w-5" />
               </Button>
-            </Link>
-            <Button variant="ghost" size="icon" onClick={() => setLang(lang === 'sl' ? 'en' : 'sl')}>
-              <Globe className="h-5 w-5" />
-            </Button>
-            <Button variant="ghost" size="icon" onClick={() => setDarkMode(!darkMode)}>
-              {darkMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
-            </Button>
+              <Button variant="ghost" size="icon" onClick={() => setDarkMode(!darkMode)}>
+                {darkMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+              </Button>
+            </div>
           </div>
         </div>
       </header>
 
       <main className="container mx-auto px-4 py-8">
         {/* Actions */}
-        <div className="mb-6 flex items-center justify-between">
-          <div className="flex items-center gap-4">
+        <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex items-center gap-2 flex-wrap">
             <Select value={filterExamType || "all"} onValueChange={(v) => setFilterExamType(v === "all" ? "" : v)}>
-              <SelectTrigger className="w-[180px]">
+              <SelectTrigger className="w-[140px] sm:w-[180px]">
                 <SelectValue placeholder={t.filterByType} />
               </SelectTrigger>
               <SelectContent>
@@ -261,7 +321,7 @@ export default function QuestionsPage() {
             </Select>
 
             <Select value={filterCategory || "all"} onValueChange={(v) => setFilterCategory(v === "all" ? "" : v)}>
-              <SelectTrigger className="w-[150px]">
+              <SelectTrigger className="w-[120px] sm:w-[150px]">
                 <SelectValue placeholder={t.filterByCategory} />
               </SelectTrigger>
               <SelectContent>
@@ -273,13 +333,21 @@ export default function QuestionsPage() {
             </Select>
           </div>
 
-          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="h-4 w-4 mr-2" />
-                {t.addQuestion}
-              </Button>
-            </DialogTrigger>
+          {isAuthenticated ? (
+            <Button onClick={() => setDialogOpen(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              {t.addQuestion}
+            </Button>
+          ) : (
+            <Button onClick={() => setAuthDialogOpen(true)}>
+              <LogIn className="h-4 w-4 mr-2" />
+              {t.loginToAdd}
+            </Button>
+          )}
+        </div>
+
+        {/* Add Question Dialog */}
+        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>{t.addQuestion}</DialogTitle>
@@ -371,15 +439,6 @@ export default function QuestionsPage() {
                     </div>
                   </div>
 
-                  <div>
-                    <Label>{t.submittedBy}</Label>
-                    <Input 
-                      value={submittedBy} 
-                      onChange={(e) => setSubmittedBy(e.target.value)}
-                      placeholder="Vaše ime ali vzdevek"
-                    />
-                  </div>
-
                   <Button onClick={handleSubmit} className="w-full">
                     {t.submit}
                   </Button>
@@ -387,7 +446,6 @@ export default function QuestionsPage() {
               )}
             </DialogContent>
           </Dialog>
-        </div>
 
         {/* Questions List */}
         {loading ? (
@@ -471,6 +529,12 @@ export default function QuestionsPage() {
           </div>
         )}
       </main>
+
+      <AuthDialog 
+        open={authDialogOpen} 
+        onOpenChange={setAuthDialogOpen} 
+        translations={t}
+      />
     </div>
   );
 }

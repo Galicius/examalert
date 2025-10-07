@@ -41,6 +41,22 @@ function verifyAdminToken(request) {
   }
 }
 
+// Helper function to verify user token
+function verifyUserToken(request) {
+  const authHeader = request.headers.get("authorization");
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return null;
+  }
+  
+  const token = authHeader.substring(7);
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || "default-secret-key");
+    return decoded;
+  } catch (error) {
+    return null;
+  }
+}
+
 // GET /api/healthz
 export async function GET(request) {
   const { pathname } = new URL(request.url);
@@ -120,6 +136,15 @@ export async function GET(request) {
     return NextResponse.json({ valid: true, username: admin.username });
   }
 
+  // GET /api/auth/verify - Verify user token
+  if (pathname === "/api/auth/verify") {
+    const user = verifyUserToken(request);
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    return NextResponse.json({ valid: true, id: user.id, username: user.username, email: user.email });
+  }
+
   // GET /api/questions
   if (pathname === "/api/questions") {
     await ensureDB();
@@ -164,12 +189,209 @@ export async function GET(request) {
     }
   }
 
+  // GET /api/learning/sessions - Get learning sessions for a date
+  if (pathname === "/api/learning/sessions") {
+    await ensureDB();
+
+    try {
+      const url = new URL(request.url);
+      const date = url.searchParams.get("date"); // Format: YYYY-MM-DD
+
+      if (!date) {
+        return NextResponse.json(
+          { error: "Date parameter required" },
+          { status: 400 }
+        );
+      }
+
+      // Define the three time slots
+      const timeSlots = ['16:00:00', '18:00:00', '20:00:00'];
+      const sessions = [];
+
+      for (const timeSlot of timeSlots) {
+        // Ensure session exists
+        const sessionResult = await query(
+          `INSERT INTO learning_sessions (session_date, session_time)
+           VALUES ($1, $2)
+           ON CONFLICT (session_date, session_time) DO UPDATE SET session_date = $1
+           RETURNING id`,
+          [date, timeSlot]
+        );
+        
+        const sessionId = sessionResult.rows[0].id;
+
+        // Get participants
+        const participantsResult = await query(
+          `SELECT sp.id, sp.note, sp.joined_at, u.username, u.email
+           FROM session_participants sp
+           JOIN users u ON sp.user_id = u.id
+           WHERE sp.session_id = $1
+           ORDER BY sp.joined_at ASC`,
+          [sessionId]
+        );
+
+        sessions.push({
+          id: sessionId,
+          date,
+          time: timeSlot.substring(0, 5), // Format as HH:MM
+          participants: participantsResult.rows,
+          availableSpots: Math.max(0, 5 - participantsResult.rows.length),
+          isFull: participantsResult.rows.length >= 5
+        });
+      }
+
+      return NextResponse.json({ sessions });
+    } catch (error) {
+      console.error("Error fetching learning sessions:", error);
+      return NextResponse.json(
+        { error: "Failed to fetch sessions", message: error.message },
+        { status: 500 }
+      );
+    }
+  }
+
   return NextResponse.json({ error: "Not found" }, { status: 404 });
 }
 
 // POST handlers
 export async function POST(request) {
   const { pathname } = new URL(request.url);
+
+  // POST /api/auth/register - User registration
+  if (pathname === "/api/auth/register") {
+    await ensureDB();
+
+    try {
+      const body = await request.json();
+      const { email, username, password } = body;
+
+      if (!email || !username || !password) {
+        return NextResponse.json(
+          { error: "Email, username, and password required" },
+          { status: 400 }
+        );
+      }
+
+      // Validate email format
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        return NextResponse.json(
+          { error: "Invalid email format" },
+          { status: 400 }
+        );
+      }
+
+      // Check if email or username already exists
+      const existingUser = await query(
+        "SELECT id FROM users WHERE email = $1 OR username = $2",
+        [email, username]
+      );
+
+      if (existingUser.rows.length > 0) {
+        return NextResponse.json(
+          { error: "Email or username already exists" },
+          { status: 400 }
+        );
+      }
+
+      // Hash password
+      const passwordHash = await bcrypt.hash(password, 10);
+
+      // Insert user
+      const result = await query(
+        `INSERT INTO users (email, username, password_hash)
+         VALUES ($1, $2, $3)
+         RETURNING id, email, username, created_at`,
+        [email, username, passwordHash]
+      );
+
+      const user = result.rows[0];
+
+      // Generate JWT token
+      const token = jwt.sign(
+        { id: user.id, username: user.username, email: user.email },
+        process.env.JWT_SECRET || "default-secret-key",
+        { expiresIn: "7d" }
+      );
+
+      return NextResponse.json({ 
+        token, 
+        user: { 
+          id: user.id, 
+          username: user.username, 
+          email: user.email 
+        } 
+      });
+    } catch (error) {
+      console.error("Error registering user:", error);
+      return NextResponse.json(
+        { error: "Registration failed", message: error.message },
+        { status: 500 }
+      );
+    }
+  }
+
+  // POST /api/auth/login - User login
+  if (pathname === "/api/auth/login") {
+    await ensureDB();
+
+    try {
+      const body = await request.json();
+      const { email, password } = body;
+
+      if (!email || !password) {
+        return NextResponse.json(
+          { error: "Email and password required" },
+          { status: 400 }
+        );
+      }
+
+      // Get user from database
+      const result = await query(
+        "SELECT id, email, username, password_hash FROM users WHERE email = $1",
+        [email]
+      );
+
+      if (result.rows.length === 0) {
+        return NextResponse.json(
+          { error: "Invalid credentials" },
+          { status: 401 }
+        );
+      }
+
+      const user = result.rows[0];
+
+      // Verify password
+      const validPassword = await bcrypt.compare(password, user.password_hash);
+      if (!validPassword) {
+        return NextResponse.json(
+          { error: "Invalid credentials" },
+          { status: 401 }
+        );
+      }
+
+      // Generate JWT token
+      const token = jwt.sign(
+        { id: user.id, username: user.username, email: user.email },
+        process.env.JWT_SECRET || "default-secret-key",
+        { expiresIn: "7d" }
+      );
+
+      return NextResponse.json({ 
+        token, 
+        user: { 
+          id: user.id, 
+          username: user.username, 
+          email: user.email 
+        } 
+      });
+    } catch (error) {
+      console.error("Error logging in:", error);
+      return NextResponse.json(
+        { error: "Login failed" },
+        { status: 500 }
+      );
+    }
+  }
 
   // POST /api/admin/login - Admin login
   if (pathname === "/api/admin/login") {
@@ -300,8 +522,17 @@ export async function POST(request) {
     }
   }
 
-  // POST /api/questions
+  // POST /api/questions (protected - requires authentication)
   if (pathname === "/api/questions") {
+    // Verify user is authenticated
+    const user = verifyUserToken(request);
+    if (!user) {
+      return NextResponse.json(
+        { error: "Authentication required" },
+        { status: 401 }
+      );
+    }
+
     await ensureDB();
 
     try {
@@ -315,7 +546,6 @@ export async function POST(request) {
         correct_answers,
         exam_type,
         category,
-        submitted_by,
       } = body;
 
       if (
@@ -346,7 +576,7 @@ export async function POST(request) {
           correct_answers,
           exam_type,
           category,
-          submitted_by || "Anonymous",
+          user.username, // Use authenticated user's username
         ]
       );
 
@@ -355,6 +585,167 @@ export async function POST(request) {
       console.error("Error creating question:", error);
       return NextResponse.json(
         { error: "Failed to create question", message: error.message },
+        { status: 500 }
+      );
+    }
+  }
+
+  // POST /api/learning/sessions/join - Join a learning session
+  if (pathname === "/api/learning/sessions/join") {
+    const user = verifyUserToken(request);
+    if (!user) {
+      return NextResponse.json(
+        { error: "Authentication required" },
+        { status: 401 }
+      );
+    }
+
+    await ensureDB();
+
+    try {
+      const body = await request.json();
+      const { session_id, note } = body;
+
+      if (!session_id) {
+        return NextResponse.json(
+          { error: "Session ID required" },
+          { status: 400 }
+        );
+      }
+
+      // Check if session is full
+      const participantsCount = await query(
+        "SELECT COUNT(*) as count FROM session_participants WHERE session_id = $1",
+        [session_id]
+      );
+
+      if (parseInt(participantsCount.rows[0].count) >= 5) {
+        return NextResponse.json(
+          { error: "Session is full" },
+          { status: 400 }
+        );
+      }
+
+      // Check if already joined
+      const existing = await query(
+        "SELECT id FROM session_participants WHERE session_id = $1 AND user_id = $2",
+        [session_id, user.id]
+      );
+
+      if (existing.rows.length > 0) {
+        return NextResponse.json(
+          { error: "Already joined this session" },
+          { status: 400 }
+        );
+      }
+
+      // Join session
+      await query(
+        `INSERT INTO session_participants (session_id, user_id, note)
+         VALUES ($1, $2, $3)`,
+        [session_id, user.id, note || null]
+      );
+
+      return NextResponse.json({ message: "Successfully joined session" });
+    } catch (error) {
+      console.error("Error joining session:", error);
+      return NextResponse.json(
+        { error: "Failed to join session", message: error.message },
+        { status: 500 }
+      );
+    }
+  }
+
+  // POST /api/learning/sessions/leave - Leave a learning session
+  if (pathname === "/api/learning/sessions/leave") {
+    const user = verifyUserToken(request);
+    if (!user) {
+      return NextResponse.json(
+        { error: "Authentication required" },
+        { status: 401 }
+      );
+    }
+
+    await ensureDB();
+
+    try {
+      const body = await request.json();
+      const { session_id } = body;
+
+      if (!session_id) {
+        return NextResponse.json(
+          { error: "Session ID required" },
+          { status: 400 }
+        );
+      }
+
+      // Leave session
+      const result = await query(
+        "DELETE FROM session_participants WHERE session_id = $1 AND user_id = $2 RETURNING id",
+        [session_id, user.id]
+      );
+
+      if (result.rows.length === 0) {
+        return NextResponse.json(
+          { error: "Not joined in this session" },
+          { status: 400 }
+        );
+      }
+
+      return NextResponse.json({ message: "Successfully left session" });
+    } catch (error) {
+      console.error("Error leaving session:", error);
+      return NextResponse.json(
+        { error: "Failed to leave session", message: error.message },
+        { status: 500 }
+      );
+    }
+  }
+
+  // POST /api/learning/sessions/note - Update note for a session
+  if (pathname === "/api/learning/sessions/note") {
+    const user = verifyUserToken(request);
+    if (!user) {
+      return NextResponse.json(
+        { error: "Authentication required" },
+        { status: 401 }
+      );
+    }
+
+    await ensureDB();
+
+    try {
+      const body = await request.json();
+      const { session_id, note } = body;
+
+      if (!session_id) {
+        return NextResponse.json(
+          { error: "Session ID required" },
+          { status: 400 }
+        );
+      }
+
+      // Update note
+      const result = await query(
+        `UPDATE session_participants 
+         SET note = $1 
+         WHERE session_id = $2 AND user_id = $3
+         RETURNING id`,
+        [note || null, session_id, user.id]
+      );
+
+      if (result.rows.length === 0) {
+        return NextResponse.json(
+          { error: "Not joined in this session" },
+          { status: 400 }
+        );
+      }
+
+      return NextResponse.json({ message: "Note updated successfully" });
+    } catch (error) {
+      console.error("Error updating note:", error);
+      return NextResponse.json(
+        { error: "Failed to update note", message: error.message },
         { status: 500 }
       );
     }

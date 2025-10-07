@@ -102,69 +102,114 @@
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
 
-user_problem_statement: "User requested to stop using the internal scraper and instead use an external scraper API at https://cppapp-v25wkpukcq-ew.a.run.app/slots_all. The external API provides all required fields for the frontend."
+user_problem_statement: "Added new features: 1) Learning page with time slots (16:00, 18:00, 20:00) where users can join study sessions (max 5 per slot), 2) User authentication system (login/register with email, username, password), 3) Protected questions feature (only logged-in users can add questions), 4) Fixed theme persistence across pages, 5) Improved mobile responsiveness."
 
 backend:
-  - task: "Integrate external scraper API"
+  - task: "User authentication system"
     implemented: true
     working: true
-    file: "app/api/[[...path]]/route.js"
+    file: "app/api/[[...path]]/route.js, lib/db.js"
     stuck_count: 0
     priority: "high"
     needs_retesting: false
     status_history:
-        - working: true
+        - working: "NA"
           agent: "main"
-          comment: "Modified GET /api/slots endpoint to fetch data from external scraper API (https://cppapp-v25wkpukcq-ew.a.run.app/slots_all). Removed internal scraping logic. API now returns data in the same format expected by frontend."
-        
-  - task: "Remove internal scraper endpoint"
-    implemented: true
-    working: true
-    file: "app/api/[[...path]]/route.js"
-    stuck_count: 0
-    priority: "high"
-    needs_retesting: false
-    status_history:
+          comment: "Added POST /api/auth/register, POST /api/auth/login, GET /api/auth/verify endpoints. Created users table in database with email, username, password_hash fields. Implemented JWT token authentication with 7-day expiry."
         - working: true
-          agent: "main"
-          comment: "Removed POST /api/trigger-scrape endpoint and notifySubscribers function as they are no longer needed with external scraper."
-  
-  - task: "Fix Resend initialization"
-    implemented: true
-    working: true
-    file: "app/api/[[...path]]/route.js"
-    stuck_count: 0
-    priority: "high"
-    needs_retesting: false
-    status_history:
-        - working: true
-          agent: "main"
-          comment: "Made Resend initialization conditional to avoid errors when RESEND_API_KEY is not set. This allows the slots endpoint to work without email functionality."
+          agent: "testing"
+          comment: "✅ BACKEND TESTED: All authentication endpoints working correctly. POST /api/auth/register successfully creates users with JWT tokens, validates email format, prevents duplicates. POST /api/auth/login authenticates users correctly, rejects invalid credentials. GET /api/auth/verify properly validates JWT tokens. Database connection fixed by installing PostgreSQL and setting DATABASE_URL environment variable."
 
-  - task: "Remove internal scraper file"
+  - task: "Learning sessions API"
     implemented: true
     working: true
-    file: "lib/scraper.js"
+    file: "app/api/[[...path]]/route.js, lib/db.js"
     stuck_count: 0
-    priority: "low"
+    priority: "high"
     needs_retesting: false
     status_history:
-        - working: true
+        - working: "NA"
           agent: "main"
-          comment: "Deleted lib/scraper.js file as it's no longer needed with external scraper API."
+          comment: "Added GET /api/learning/sessions, POST /api/learning/sessions/join, POST /api/learning/sessions/leave, POST /api/learning/sessions/note endpoints. Created learning_sessions and session_participants tables. Time slots: 16:00, 18:00, 20:00 with max 5 participants per slot."
+        - working: true
+          agent: "testing"
+          comment: "✅ BACKEND TESTED: All learning session endpoints working correctly. GET /api/learning/sessions returns 3 time slots (16:00, 18:00, 20:00) with proper participant data. POST /api/learning/sessions/join requires authentication, prevents duplicate joins, enforces 5-participant limit. POST /api/learning/sessions/leave works correctly. POST /api/learning/sessions/note updates session notes properly. All authentication checks working."
+
+  - task: "Protect questions endpoint"
+    implemented: true
+    working: true
+    file: "app/api/[[...path]]/route.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: "NA"
+          agent: "main"
+          comment: "Modified POST /api/questions to require authentication. Now uses JWT token to verify user identity and automatically uses authenticated user's username as submitted_by field."
+        - working: true
+          agent: "testing"
+          comment: "✅ BACKEND TESTED: Protected questions endpoint working correctly. POST /api/questions requires authentication (returns 401 without token), creates questions with authenticated username as submitted_by field when properly authenticated. JWT token validation working properly."
 
 frontend:
-  - task: "Test slot display with external API"
+  - task: "Auth context and components"
     implemented: true
-    working: true
-    file: "app/page.js"
+    working: "NA"
+    file: "lib/auth.js, components/auth-dialog.js, app/layout.js"
     stuck_count: 0
     priority: "high"
-    needs_retesting: false
+    needs_retesting: true
     status_history:
-        - working: true
+        - working: "NA"
           agent: "main"
-          comment: "Frontend successfully displays slots from external API. All filters working correctly. Tested with 91 live slots."
+          comment: "Created AuthProvider context with login, register, logout functions. Created AuthDialog component with login/register tabs. Wrapped app in AuthProvider in layout.js. JWT tokens stored in localStorage."
+
+  - task: "Learning page"
+    implemented: true
+    working: "NA"
+    file: "app/learning/page.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+        - working: "NA"
+          agent: "main"
+          comment: "Created learning page with date picker and 3 time slots (16:00, 18:00, 20:00). Shows participants with usernames and optional notes. Join/leave buttons for authenticated users. Note editing functionality."
+
+  - task: "Protected questions feature"
+    implemented: true
+    working: "NA"
+    file: "app/questions/page.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+        - working: "NA"
+          agent: "main"
+          comment: "Updated questions page to require authentication for adding questions. Shows login prompt for non-authenticated users. Removed manual author field, now uses authenticated username."
+
+  - task: "Theme persistence"
+    implemented: true
+    working: "NA"
+    file: "app/page.js, app/questions/page.js, app/learning/page.js"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: true
+    status_history:
+        - working: "NA"
+          agent: "main"
+          comment: "Added localStorage for theme persistence. Theme now loads from localStorage on mount and saves on change. Dark mode persists across page navigation."
+
+  - task: "Mobile responsiveness"
+    implemented: true
+    working: "NA"
+    file: "app/page.js, app/questions/page.js, app/learning/page.js"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: true
+    status_history:
+        - working: "NA"
+          agent: "main"
+          comment: "Updated headers and filters to be responsive. Added flex-wrap and responsive breakpoints (sm:, lg:). Hidden button text on mobile, showing only icons. Improved grid layouts for mobile."
 
 metadata:
   created_by: "main_agent"
@@ -174,12 +219,14 @@ metadata:
 
 test_plan:
   current_focus:
-    - "External API integration"
-    - "Frontend slot display"
+    - "Backend testing complete - all high priority backend tasks working"
+    - "Frontend testing not performed (testing agent scope limitation)"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
 
 agent_communication:
     - agent: "main"
-      message: "Successfully migrated from internal scraper to external scraper API. Modified GET /api/slots to fetch from https://cppapp-v25wkpukcq-ew.a.run.app/slots_all. Removed POST /api/trigger-scrape endpoint. Deleted lib/scraper.js. Fixed Resend initialization issue. Frontend tested and working with 91 live slots. Updated README documentation."
+      message: "Implemented all requested features: 1) Created user authentication system with register/login (email, username, password), 2) Built learning page with 3 daily time slots (16:00, 18:00, 20:00) supporting up to 5 participants each with optional notes, 3) Protected questions endpoint to require authentication, 4) Fixed theme persistence using localStorage across all pages, 5) Improved mobile responsiveness across all pages. Ready for backend testing."
+    - agent: "testing"
+      message: "✅ BACKEND TESTING COMPLETE: All high-priority backend features tested and working correctly. Fixed database connection issue by installing PostgreSQL and configuring DATABASE_URL. All 26 backend tests passed (100% success rate). Authentication system, learning sessions API, and protected questions endpoint all functioning properly with correct validation, error handling, and security measures."

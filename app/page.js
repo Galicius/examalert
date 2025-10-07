@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { Moon, Sun, Globe, Mail, LayoutGrid, List, AlignJustify, MessageCircleQuestion } from 'lucide-react';
+import { Moon, Sun, Globe, Mail, LayoutGrid, List, AlignJustify, MessageCircleQuestion, Users } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -115,6 +115,14 @@ export default function App() {
 
   const t = translations[lang];
 
+  // Load theme from localStorage on mount
+  useEffect(() => {
+    const savedTheme = localStorage.getItem('theme');
+    if (savedTheme === 'dark') {
+      setDarkMode(true);
+    }
+  }, []);
+
   // Get available towns based on selected region
   const availableTowns = useMemo(() => {
     if (!filterObmocje) {
@@ -133,11 +141,14 @@ export default function App() {
     }
   }, [filterObmocje, filterTown]);
 
+  // Save theme to localStorage and apply
   useEffect(() => {
     if (darkMode) {
       document.documentElement.classList.add('dark');
+      localStorage.setItem('theme', 'dark');
     } else {
       document.documentElement.classList.remove('dark');
+      localStorage.setItem('theme', 'light');
     }
   }, [darkMode]);
 
@@ -317,21 +328,29 @@ export default function App() {
     <div className="min-h-screen bg-background text-foreground">
       {/* Header */}
       <header className="border-b border-border bg-card">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <h1 className="text-2xl font-bold">{t.title}</h1>
-          <div className="flex items-center gap-4">
-            <Link href="/questions">
-              <Button variant="outline" size="sm">
-                <MessageCircleQuestion className="h-4 w-4 mr-2" />
-                {lang === 'sl' ? 'Vprašanja' : 'Questions'}
+        <div className="container mx-auto px-4 py-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <h1 className="text-2xl font-bold">{t.title}</h1>
+            <div className="flex items-center gap-2 flex-wrap">
+              <Link href="/questions">
+                <Button variant="outline" size="sm">
+                  <MessageCircleQuestion className="h-4 w-4 mr-2" />
+                  <span className="hidden sm:inline">{lang === 'sl' ? 'Vprašanja' : 'Questions'}</span>
+                </Button>
+              </Link>
+              <Link href="/learning">
+                <Button variant="outline" size="sm">
+                  <Users className="h-4 w-4 mr-2" />
+                  <span className="hidden sm:inline">{lang === 'sl' ? 'Učenje' : 'Learning'}</span>
+                </Button>
+              </Link>
+              <Button variant="ghost" size="icon" onClick={() => setLang(lang === 'sl' ? 'en' : 'sl')}>
+                <Globe className="h-5 w-5" />
               </Button>
-            </Link>
-            <Button variant="ghost" size="icon" onClick={() => setLang(lang === 'sl' ? 'en' : 'sl')}>
-              <Globe className="h-5 w-5" />
-            </Button>
-            <Button variant="ghost" size="icon" onClick={() => setDarkMode(!darkMode)}>
-              {darkMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
-            </Button>
+              <Button variant="ghost" size="icon" onClick={() => setDarkMode(!darkMode)}>
+                {darkMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+              </Button>
+            </div>
           </div>
         </div>
       </header>
@@ -365,14 +384,14 @@ export default function App() {
         {/* Filters */}
         <Card className="mb-6">
           <CardContent className="pt-6">
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
               <h2 className="text-lg font-semibold">{t.filterTitle}</h2>
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2 flex-wrap">
                 <Dialog open={subscribeOpen} onOpenChange={setSubscribeOpen}>
                   <DialogTrigger asChild>
                     <Button variant="outline" size="sm">
                       <Mail className="h-4 w-4 mr-2" />
-                      {t.subscribe}
+                      <span className="hidden sm:inline">{t.subscribe}</span>
                     </Button>
                   </DialogTrigger>
                   <DialogContent>
@@ -399,7 +418,7 @@ export default function App() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
               {/* Exam Type Toggle */}
               <div>
                 <Label>{t.examType}</Label>
