@@ -142,17 +142,65 @@ backend:
           comment: "Modified POST /api/questions to require authentication. Now uses JWT token to verify user identity and automatically uses authenticated user's username as submitted_by field."
 
 frontend:
-  - task: "Test slot display with external API"
+  - task: "Auth context and components"
     implemented: true
-    working: true
-    file: "app/page.js"
+    working: "NA"
+    file: "lib/auth.js, components/auth-dialog.js, app/layout.js"
     stuck_count: 0
     priority: "high"
-    needs_retesting: false
+    needs_retesting: true
     status_history:
-        - working: true
+        - working: "NA"
           agent: "main"
-          comment: "Frontend successfully displays slots from external API. All filters working correctly. Tested with 91 live slots."
+          comment: "Created AuthProvider context with login, register, logout functions. Created AuthDialog component with login/register tabs. Wrapped app in AuthProvider in layout.js. JWT tokens stored in localStorage."
+
+  - task: "Learning page"
+    implemented: true
+    working: "NA"
+    file: "app/learning/page.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+        - working: "NA"
+          agent: "main"
+          comment: "Created learning page with date picker and 3 time slots (16:00, 18:00, 20:00). Shows participants with usernames and optional notes. Join/leave buttons for authenticated users. Note editing functionality."
+
+  - task: "Protected questions feature"
+    implemented: true
+    working: "NA"
+    file: "app/questions/page.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+        - working: "NA"
+          agent: "main"
+          comment: "Updated questions page to require authentication for adding questions. Shows login prompt for non-authenticated users. Removed manual author field, now uses authenticated username."
+
+  - task: "Theme persistence"
+    implemented: true
+    working: "NA"
+    file: "app/page.js, app/questions/page.js, app/learning/page.js"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: true
+    status_history:
+        - working: "NA"
+          agent: "main"
+          comment: "Added localStorage for theme persistence. Theme now loads from localStorage on mount and saves on change. Dark mode persists across page navigation."
+
+  - task: "Mobile responsiveness"
+    implemented: true
+    working: "NA"
+    file: "app/page.js, app/questions/page.js, app/learning/page.js"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: true
+    status_history:
+        - working: "NA"
+          agent: "main"
+          comment: "Updated headers and filters to be responsive. Added flex-wrap and responsive breakpoints (sm:, lg:). Hidden button text on mobile, showing only icons. Improved grid layouts for mobile."
 
 metadata:
   created_by: "main_agent"
