@@ -334,22 +334,20 @@ export default function QuestionsPage() {
           </div>
 
           {isAuthenticated ? (
-            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-              <DialogTrigger asChild>
-                <Button>
-                  <Plus className="h-4 w-4 mr-2" />
-                  {t.addQuestion}
-                </Button>
-              </DialogTrigger>
+            <Button onClick={() => setDialogOpen(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              {t.addQuestion}
+            </Button>
           ) : (
             <Button onClick={() => setAuthDialogOpen(true)}>
               <LogIn className="h-4 w-4 mr-2" />
               {t.loginToAdd}
             </Button>
           )}
+        </div>
 
-          {isAuthenticated && (
-            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        {/* Add Question Dialog */}
+        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>{t.addQuestion}</DialogTitle>
