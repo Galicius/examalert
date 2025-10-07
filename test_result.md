@@ -105,53 +105,41 @@
 user_problem_statement: "Added new features: 1) Learning page with time slots (16:00, 18:00, 20:00) where users can join study sessions (max 5 per slot), 2) User authentication system (login/register with email, username, password), 3) Protected questions feature (only logged-in users can add questions), 4) Fixed theme persistence across pages, 5) Improved mobile responsiveness."
 
 backend:
-  - task: "Integrate external scraper API"
+  - task: "User authentication system"
     implemented: true
-    working: true
-    file: "app/api/[[...path]]/route.js"
+    working: "NA"
+    file: "app/api/[[...path]]/route.js, lib/db.js"
     stuck_count: 0
     priority: "high"
-    needs_retesting: false
+    needs_retesting: true
     status_history:
-        - working: true
+        - working: "NA"
           agent: "main"
-          comment: "Modified GET /api/slots endpoint to fetch data from external scraper API (https://cppapp-v25wkpukcq-ew.a.run.app/slots_all). Removed internal scraping logic. API now returns data in the same format expected by frontend."
-        
-  - task: "Remove internal scraper endpoint"
-    implemented: true
-    working: true
-    file: "app/api/[[...path]]/route.js"
-    stuck_count: 0
-    priority: "high"
-    needs_retesting: false
-    status_history:
-        - working: true
-          agent: "main"
-          comment: "Removed POST /api/trigger-scrape endpoint and notifySubscribers function as they are no longer needed with external scraper."
-  
-  - task: "Fix Resend initialization"
-    implemented: true
-    working: true
-    file: "app/api/[[...path]]/route.js"
-    stuck_count: 0
-    priority: "high"
-    needs_retesting: false
-    status_history:
-        - working: true
-          agent: "main"
-          comment: "Made Resend initialization conditional to avoid errors when RESEND_API_KEY is not set. This allows the slots endpoint to work without email functionality."
+          comment: "Added POST /api/auth/register, POST /api/auth/login, GET /api/auth/verify endpoints. Created users table in database with email, username, password_hash fields. Implemented JWT token authentication with 7-day expiry."
 
-  - task: "Remove internal scraper file"
+  - task: "Learning sessions API"
     implemented: true
-    working: true
-    file: "lib/scraper.js"
+    working: "NA"
+    file: "app/api/[[...path]]/route.js, lib/db.js"
     stuck_count: 0
-    priority: "low"
-    needs_retesting: false
+    priority: "high"
+    needs_retesting: true
     status_history:
-        - working: true
+        - working: "NA"
           agent: "main"
-          comment: "Deleted lib/scraper.js file as it's no longer needed with external scraper API."
+          comment: "Added GET /api/learning/sessions, POST /api/learning/sessions/join, POST /api/learning/sessions/leave, POST /api/learning/sessions/note endpoints. Created learning_sessions and session_participants tables. Time slots: 16:00, 18:00, 20:00 with max 5 participants per slot."
+
+  - task: "Protect questions endpoint"
+    implemented: true
+    working: "NA"
+    file: "app/api/[[...path]]/route.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+        - working: "NA"
+          agent: "main"
+          comment: "Modified POST /api/questions to require authentication. Now uses JWT token to verify user identity and automatically uses authenticated user's username as submitted_by field."
 
 frontend:
   - task: "Test slot display with external API"
