@@ -439,15 +439,6 @@ export default function QuestionsPage() {
                     </div>
                   </div>
 
-                  <div>
-                    <Label>{t.submittedBy}</Label>
-                    <Input 
-                      value={submittedBy} 
-                      onChange={(e) => setSubmittedBy(e.target.value)}
-                      placeholder="Vaše ime ali vzdevek"
-                    />
-                  </div>
-
                   <Button onClick={handleSubmit} className="w-full">
                     {t.submit}
                   </Button>
