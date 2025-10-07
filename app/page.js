@@ -384,14 +384,14 @@ export default function App() {
         {/* Filters */}
         <Card className="mb-6">
           <CardContent className="pt-6">
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
               <h2 className="text-lg font-semibold">{t.filterTitle}</h2>
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2 flex-wrap">
                 <Dialog open={subscribeOpen} onOpenChange={setSubscribeOpen}>
                   <DialogTrigger asChild>
                     <Button variant="outline" size="sm">
                       <Mail className="h-4 w-4 mr-2" />
-                      {t.subscribe}
+                      <span className="hidden sm:inline">{t.subscribe}</span>
                     </Button>
                   </DialogTrigger>
                   <DialogContent>
@@ -418,7 +418,7 @@ export default function App() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
               {/* Exam Type Toggle */}
               <div>
                 <Label>{t.examType}</Label>
