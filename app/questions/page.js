@@ -307,10 +307,10 @@ export default function QuestionsPage() {
 
       <main className="container mx-auto px-4 py-8">
         {/* Actions */}
-        <div className="mb-6 flex items-center justify-between">
-          <div className="flex items-center gap-4">
+        <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex items-center gap-2 flex-wrap">
             <Select value={filterExamType || "all"} onValueChange={(v) => setFilterExamType(v === "all" ? "" : v)}>
-              <SelectTrigger className="w-[180px]">
+              <SelectTrigger className="w-[140px] sm:w-[180px]">
                 <SelectValue placeholder={t.filterByType} />
               </SelectTrigger>
               <SelectContent>
@@ -321,7 +321,7 @@ export default function QuestionsPage() {
             </Select>
 
             <Select value={filterCategory || "all"} onValueChange={(v) => setFilterCategory(v === "all" ? "" : v)}>
-              <SelectTrigger className="w-[150px]">
+              <SelectTrigger className="w-[120px] sm:w-[150px]">
                 <SelectValue placeholder={t.filterByCategory} />
               </SelectTrigger>
               <SelectContent>
@@ -333,13 +333,23 @@ export default function QuestionsPage() {
             </Select>
           </div>
 
-          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="h-4 w-4 mr-2" />
-                {t.addQuestion}
-              </Button>
-            </DialogTrigger>
+          {isAuthenticated ? (
+            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+              <DialogTrigger asChild>
+                <Button>
+                  <Plus className="h-4 w-4 mr-2" />
+                  {t.addQuestion}
+                </Button>
+              </DialogTrigger>
+          ) : (
+            <Button onClick={() => setAuthDialogOpen(true)}>
+              <LogIn className="h-4 w-4 mr-2" />
+              {t.loginToAdd}
+            </Button>
+          )}
+
+          {isAuthenticated && (
+            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>{t.addQuestion}</DialogTitle>
