@@ -257,6 +257,142 @@ export async function GET(request) {
 export async function POST(request) {
   const { pathname } = new URL(request.url);
 
+  // POST /api/auth/register - User registration
+  if (pathname === "/api/auth/register") {
+    await ensureDB();
+
+    try {
+      const body = await request.json();
+      const { email, username, password } = body;
+
+      if (!email || !username || !password) {
+        return NextResponse.json(
+          { error: "Email, username, and password required" },
+          { status: 400 }
+        );
+      }
+
+      // Validate email format
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        return NextResponse.json(
+          { error: "Invalid email format" },
+          { status: 400 }
+        );
+      }
+
+      // Check if email or username already exists
+      const existingUser = await query(
+        "SELECT id FROM users WHERE email = $1 OR username = $2",
+        [email, username]
+      );
+
+      if (existingUser.rows.length > 0) {
+        return NextResponse.json(
+          { error: "Email or username already exists" },
+          { status: 400 }
+        );
+      }
+
+      // Hash password
+      const passwordHash = await bcrypt.hash(password, 10);
+
+      // Insert user
+      const result = await query(
+        `INSERT INTO users (email, username, password_hash)
+         VALUES ($1, $2, $3)
+         RETURNING id, email, username, created_at`,
+        [email, username, passwordHash]
+      );
+
+      const user = result.rows[0];
+
+      // Generate JWT token
+      const token = jwt.sign(
+        { id: user.id, username: user.username, email: user.email },
+        process.env.JWT_SECRET || "default-secret-key",
+        { expiresIn: "7d" }
+      );
+
+      return NextResponse.json({ 
+        token, 
+        user: { 
+          id: user.id, 
+          username: user.username, 
+          email: user.email 
+        } 
+      });
+    } catch (error) {
+      console.error("Error registering user:", error);
+      return NextResponse.json(
+        { error: "Registration failed", message: error.message },
+        { status: 500 }
+      );
+    }
+  }
+
+  // POST /api/auth/login - User login
+  if (pathname === "/api/auth/login") {
+    await ensureDB();
+
+    try {
+      const body = await request.json();
+      const { email, password } = body;
+
+      if (!email || !password) {
+        return NextResponse.json(
+          { error: "Email and password required" },
+          { status: 400 }
+        );
+      }
+
+      // Get user from database
+      const result = await query(
+        "SELECT id, email, username, password_hash FROM users WHERE email = $1",
+        [email]
+      );
+
+      if (result.rows.length === 0) {
+        return NextResponse.json(
+          { error: "Invalid credentials" },
+          { status: 401 }
+        );
+      }
+
+      const user = result.rows[0];
+
+      // Verify password
+      const validPassword = await bcrypt.compare(password, user.password_hash);
+      if (!validPassword) {
+        return NextResponse.json(
+          { error: "Invalid credentials" },
+          { status: 401 }
+        );
+      }
+
+      // Generate JWT token
+      const token = jwt.sign(
+        { id: user.id, username: user.username, email: user.email },
+        process.env.JWT_SECRET || "default-secret-key",
+        { expiresIn: "7d" }
+      );
+
+      return NextResponse.json({ 
+        token, 
+        user: { 
+          id: user.id, 
+          username: user.username, 
+          email: user.email 
+        } 
+      });
+    } catch (error) {
+      console.error("Error logging in:", error);
+      return NextResponse.json(
+        { error: "Login failed" },
+        { status: 500 }
+      );
+    }
+  }
+
   // POST /api/admin/login - Admin login
   if (pathname === "/api/admin/login") {
     await ensureDB();
