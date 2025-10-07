@@ -175,6 +175,11 @@ export default function QuestionsPage() {
   };
 
   const handleSubmit = async () => {
+    if (!isAuthenticated) {
+      setAuthDialogOpen(true);
+      return;
+    }
+
     if (!questionText || !answerA || !answerB || !answerC || !answerD) {
       alert(t.fillAllFields);
       return;
@@ -194,7 +199,10 @@ export default function QuestionsPage() {
     try {
       const res = await fetch('/api/questions', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          ...getAuthHeaders()
+        },
         body: JSON.stringify({
           question_text: questionText,
           answer_a: answerA,
@@ -204,7 +212,6 @@ export default function QuestionsPage() {
           correct_answers: correctAnswers.join(','),
           exam_type: examType,
           category,
-          submitted_by: submittedBy || 'Anonymous'
         }),
       });
 
@@ -216,9 +223,13 @@ export default function QuestionsPage() {
           resetForm();
           fetchQuestions();
         }, 1500);
+      } else {
+        const data = await res.json();
+        alert(data.error || 'Failed to submit question');
       }
     } catch (error) {
       console.error('Error submitting question:', error);
+      alert('Failed to submit question');
     }
   };
 
