@@ -207,6 +207,7 @@ export default function App() {
   };
 
   const filteredSlots = slots.filter(slot => {
+    if (slot.places_left === 0) return false;
     if (filterExamType && slot.exam_type !== filterExamType) return false;
     if (filterTolmac && !slot.tolmac) return false;
     if (filterObmocje && slot.obmocje !== parseInt(filterObmocje)) return false;
