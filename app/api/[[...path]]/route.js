@@ -494,7 +494,7 @@ export async function POST(request) {
       const unsubscribeUrl = `${baseUrl}/api/unsubscribe?token=${unsubscribeToken}`;
 
       await resend.emails.send({
-        from: "notifications@resend.dev",
+        from: "obvestila@vozniski.si",
         to: email,
         subject: "Subscription Confirmed - Exam Slot Notifications",
         html: `
