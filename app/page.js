@@ -1,115 +1,207 @@
-'use client';
+"use client";
 
-import { useState, useEffect, useMemo } from 'react';
-import { Moon, Sun, Globe, Mail, LayoutGrid, List, AlignJustify, MessageCircleQuestion, Users } from 'lucide-react';
-import Link from 'next/link';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { Switch } from '@/components/ui/switch';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
-import { Input } from '@/components/ui/input';
+import { useState, useEffect, useMemo } from "react";
+import {
+  Moon,
+  Sun,
+  Globe,
+  Mail,
+  LayoutGrid,
+  List,
+  AlignJustify,
+  MessageCircleQuestion,
+  Users,
+} from "lucide-react";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { Input } from "@/components/ui/input";
 
 const OBMOCJE_MAP = {
-  1: ["Ajdovščina", "Idrija", "Ilirska Bistrica", "Koper", "Nova Gorica", "Postojna", "Sežana", "Tolmin"],
+  1: [
+    "Ajdovščina",
+    "Idrija",
+    "Ilirska Bistrica",
+    "Koper",
+    "Nova Gorica",
+    "Postojna",
+    "Sežana",
+    "Tolmin",
+  ],
   2: ["Domžale", "Ig", "Jesenice", "Kranj", "Ljubljana", "Vrhnika"],
-  3: ["Celje", "Laško", "Ločica ob Savinji", "Ravne na Koroškem", "Slovenske Konjice", "Slovenj Gradec", "Šentjur", "Šmarje pri Jelšah", "Trbovlje", "Velenje"],
+  3: [
+    "Celje",
+    "Laško",
+    "Ločica ob Savinji",
+    "Ravne na Koroškem",
+    "Slovenske Konjice",
+    "Slovenj Gradec",
+    "Šentjur",
+    "Šmarje pri Jelšah",
+    "Trbovlje",
+    "Velenje",
+  ],
   4: ["Brežice", "Črnomelj", "Kočevje", "Krško", "Novo mesto", "Sevnica"],
   5: ["Maribor", "Murska Sobota", "Ormož", "Ptuj", "Slovenska Bistrica"],
 };
 
+const ADDRESS_MAP = {
+  // ===== OBMOČJE 1 =====
+  Ajdovščina: "Tovarniška cesta 26, Ajdovščina",
+  Idrija: "Mestni trg 2, Idrija",
+  "Ilirska Bistrica": "Šercerjeva cesta 17, Ilirska Bistrica",
+  Koper: "Ljubljanska cesta 6, Koper",
+  "Nova Gorica": "Trg Edvarda Kardelja 1, Nova Gorica",
+  Postojna: "Kazarje 10 (EPIC), Postojna",
+  Sežana: "Ulica Mirka Pirca 4, Sežana",
+  Tolmin: "Tumov drevored 4, Tolmin",
+
+  // ===== OBMOČJE 2 =====
+  Domžale: "Ljubljanska cesta 71, Domžale",
+  Ig: "Ig",
+  Jesenice: "Cesta železarjev 6a, Jesenice",
+  Kranj: "Kolodvorska cesta 5, Kranj",
+  Ljubljana: "Cesta dveh cesarjev 176, Ljubljana",
+  Vrhnika: "Vrhnika",
+
+  // ===== OBMOČJE 3 =====
+  Celje: "Cesta v Celje 14, Ljubečna",
+  Laško: "Poženelova ulica 22, Laško",
+  "Ločica ob Savinji": "Ločica ob Savinji 49, Ločica ob Savinji",
+  "Ravne na Koroškem": "Čečovje 12a, Ravne na Koroškem",
+  "Slovenske Konjice": "Tattenbachova ulica 2a, Slovenske Konjice",
+  "Slovenj Gradec": "Meškova ulica 21, Slovenj Gradec",
+  Šentjur: "Cesta na kmetijsko šolo 9, Šentjur",
+  "Šmarje pri Jelšah": "Obrtniška ulica 4, Šmarje pri Jelšah",
+  Trbovlje: "Mestni trg 4, Trbovlje",
+  Velenje: "Koroška cesta 62a, Velenje",
+
+  // ===== OBMOČJE 4 =====
+  Brežice: "Izobraževalno vadbeni center, Bizeljska cesta 45, Brežice",
+  Črnomelj: "Ulica Otona Župančiča 4, Črnomelj",
+  Kočevje: "Cesta na stadion 7, Kočevje",
+  Krško: "Žadovinek 36, Krško",
+  "Novo mesto": "UE Defranceschijeva 1 (vhod z zadnje strani), Novo mesto",
+  Sevnica: "Prvomajska ulica 8, Sevnica",
+
+  // ===== OBMOČJE 5 =====
+  Maribor: "Cesta k Tamu 11, Maribor",
+  "Murska Sobota": "Noršinska ulica 8, Murska Sobota",
+  Ormož: "Vrazova ulica 12, Ormož",
+  Ptuj: "Dornavska cesta 22B, Ptuj",
+  "Slovenska Bistrica": "Partizanska cesta 22, Slovenska Bistrica",
+};
+
 const CATEGORY_GROUPS = [
-  ['A', 'A1', 'A2', 'AM'],
-  ['B', 'B1', 'BE'],
-  ['C', 'C1', 'C1E', 'CE'],
-  ['D', 'D1', 'D1E', 'DE'],
-  ['F', 'G']
+  ["A", "A1", "A2", "AM"],
+  ["B", "B1", "BE"],
+  ["C", "C1", "C1E", "CE"],
+  ["D", "D1", "D1E", "DE"],
+  ["F", "G"],
 ];
 
 const translations = {
   sl: {
-    title: 'Iskanje terminov za vozniški izpit',
-    loading: 'Nalaganje...',
-    noSlots: 'Ni razpoložljivih terminov',
-    filterTitle: 'Filtri',
-    date: 'Datum',
-    time: 'Čas',
-    location: 'Lokacija',
-    categories: 'Kategorije',
-    places: 'Prosta mesta',
-    examType: 'Tip izpita',
-    examTypeDriving: 'Vožnja',
-    examTypeTheory: 'Teorija',
-    withTranslator: 'S tolmačem',
-    region: 'Območje',
-    regionAll: 'Vsa območja',
-    town: 'Mesto',
-    townAll: 'Vsa mesta',
-    clearFilters: 'Počisti filtre',
-    subscribe: 'Naroči se na obvestila',
-    subscribeDesc: 'Prejemajte e-poštna obvestila, ko se pojavi nov termin, ki ustreza vašim filtrom',
-    email: 'E-pošta',
-    subscribeBtn: 'Naroči se',
-    subscribeSuccess: 'Uspešno ste se naročili na obvestila!',
-    lastUpdated: 'Zadnja posodobitev',
-    slotsFound: 'najdenih terminov',
-    viewList: 'Seznam',
-    viewGrid: 'Mreža',
-    viewCompact: 'Kompaktno',
-    categoryAll: 'Vse kategorije',
+    title: "Iskanje terminov za vozniški izpit",
+    loading: "Nalaganje...",
+    noSlots: "Ni razpoložljivih terminov",
+    filterTitle: "Filtri",
+    date: "Datum",
+    time: "Čas",
+    location: "Lokacija",
+    categories: "Kategorije",
+    places: "Prosta mesta",
+    examType: "Tip izpita",
+    examTypeDriving: "Vožnja",
+    examTypeTheory: "Teorija",
+    withTranslator: "S tolmačem",
+    region: "Območje",
+    regionAll: "Vsa območja",
+    town: "Mesto",
+    townAll: "Vsa mesta",
+    clearFilters: "Počisti filtre",
+    subscribe: "Naroči se na obvestila",
+    subscribeDesc:
+      "Prejemajte e-poštna obvestila, ko se pojavi nov termin, ki ustreza vašim filtrom",
+    email: "E-pošta",
+    subscribeBtn: "Naroči se",
+    subscribeSuccess: "Uspešno ste se naročili na obvestila!",
+    lastUpdated: "Zadnja posodobitev",
+    slotsFound: "najdenih terminov",
+    viewList: "Seznam",
+    viewGrid: "Mreža",
+    viewCompact: "Kompaktno",
+    categoryAll: "Vse kategorije",
   },
   en: {
-    title: 'Driving Exam Slot Finder',
-    loading: 'Loading...',
-    noSlots: 'No available slots',
-    filterTitle: 'Filters',
-    date: 'Date',
-    time: 'Time',
-    location: 'Location',
-    categories: 'Categories',
-    places: 'Available places',
-    examType: 'Exam type',
-    examTypeDriving: 'Driving',
-    examTypeTheory: 'Theory',
-    withTranslator: 'With translator',
-    region: 'Region',
-    regionAll: 'All regions',
-    town: 'Town',
-    townAll: 'All towns',
-    clearFilters: 'Clear filters',
-    subscribe: 'Subscribe to notifications',
-    subscribeDesc: 'Receive email notifications when new slots matching your filters appear',
-    email: 'Email',
-    subscribeBtn: 'Subscribe',
-    subscribeSuccess: 'Successfully subscribed to notifications!',
-    lastUpdated: 'Last updated',
-    slotsFound: 'slots found',
-    viewList: 'List',
-    viewGrid: 'Grid',
-    viewCompact: 'Compact',
-    categoryAll: 'All categories',
-  }
+    title: "Driving Exam Slot Finder",
+    loading: "Loading...",
+    noSlots: "No available slots",
+    filterTitle: "Filters",
+    date: "Date",
+    time: "Time",
+    location: "Location",
+    categories: "Categories",
+    places: "Available places",
+    examType: "Exam type",
+    examTypeDriving: "Driving",
+    examTypeTheory: "Theory",
+    withTranslator: "With translator",
+    region: "Region",
+    regionAll: "All regions",
+    town: "Town",
+    townAll: "All towns",
+    clearFilters: "Clear filters",
+    subscribe: "Subscribe to notifications",
+    subscribeDesc:
+      "Receive email notifications when new slots matching your filters appear",
+    email: "Email",
+    subscribeBtn: "Subscribe",
+    subscribeSuccess: "Successfully subscribed to notifications!",
+    lastUpdated: "Last updated",
+    slotsFound: "slots found",
+    viewList: "List",
+    viewGrid: "Grid",
+    viewCompact: "Compact",
+    categoryAll: "All categories",
+  },
 };
 
 export default function App() {
   const [darkMode, setDarkMode] = useState(false);
-  const [lang, setLang] = useState('sl');
+  const [lang, setLang] = useState("sl");
   const [slots, setSlots] = useState([]);
   const [loading, setLoading] = useState(true);
   const [lastScraped, setLastScraped] = useState(null);
-  const [viewMode, setViewMode] = useState('list');
-  
+  const [viewMode, setViewMode] = useState("list");
+
   // Filters
-  const [filterExamType, setFilterExamType] = useState('voznja');
+  const [filterExamType, setFilterExamType] = useState("voznja");
   const [filterTolmac, setFilterTolmac] = useState(false);
-  const [filterObmocje, setFilterObmocje] = useState('');
-  const [filterTown, setFilterTown] = useState('');
-  const [filterCategory, setFilterCategory] = useState('');
-  
+  const [filterObmocje, setFilterObmocje] = useState("");
+  const [filterTown, setFilterTown] = useState("");
+  const [filterCategory, setFilterCategory] = useState("");
+
   // Subscription
-  const [subscribeEmail, setSubscribeEmail] = useState('');
+  const [subscribeEmail, setSubscribeEmail] = useState("");
   const [subscribeOpen, setSubscribeOpen] = useState(false);
   const [subscribeSuccess, setSubscribeSuccess] = useState(false);
 
@@ -117,8 +209,8 @@ export default function App() {
 
   // Load theme from localStorage on mount
   useEffect(() => {
-    const savedTheme = localStorage.getItem('theme');
-    if (savedTheme === 'dark') {
+    const savedTheme = localStorage.getItem("theme");
+    if (savedTheme === "dark") {
       setDarkMode(true);
     }
   }, []);
@@ -126,7 +218,7 @@ export default function App() {
   // Get available towns based on selected region
   const availableTowns = useMemo(() => {
     if (!filterObmocje) {
-      return [...new Set(slots.map(s => s.town).filter(Boolean))];
+      return [...new Set(slots.map((s) => s.town).filter(Boolean))];
     }
     return OBMOCJE_MAP[parseInt(filterObmocje)] || [];
   }, [filterObmocje, slots]);
@@ -136,7 +228,7 @@ export default function App() {
     if (filterObmocje && filterTown) {
       const validTowns = OBMOCJE_MAP[parseInt(filterObmocje)] || [];
       if (!validTowns.includes(filterTown)) {
-        setFilterTown('');
+        setFilterTown("");
       }
     }
   }, [filterObmocje, filterTown]);
@@ -144,11 +236,11 @@ export default function App() {
   // Save theme to localStorage and apply
   useEffect(() => {
     if (darkMode) {
-      document.documentElement.classList.add('dark');
-      localStorage.setItem('theme', 'dark');
+      document.documentElement.classList.add("dark");
+      localStorage.setItem("theme", "dark");
     } else {
-      document.documentElement.classList.remove('dark');
-      localStorage.setItem('theme', 'light');
+      document.documentElement.classList.remove("dark");
+      localStorage.setItem("theme", "light");
     }
   }, [darkMode]);
 
@@ -159,12 +251,12 @@ export default function App() {
   const fetchSlots = async () => {
     try {
       setLoading(true);
-      const res = await fetch('/api/slots');
+      const res = await fetch("/api/slots");
       const data = await res.json();
       setSlots(data.items || []);
       setLastScraped(data.last_scraped_at);
     } catch (error) {
-      console.error('Error fetching slots:', error);
+      console.error("Error fetching slots:", error);
     } finally {
       setLoading(false);
     }
@@ -172,68 +264,83 @@ export default function App() {
 
   const handleSubscribe = async () => {
     try {
-      const res = await fetch('/api/subscribe', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const res = await fetch("/api/subscribe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           email: subscribeEmail,
           filter_obmocje: filterObmocje ? parseInt(filterObmocje) : null,
           filter_town: filterTown || null,
           filter_exam_type: filterExamType || null,
-          filter_tolmac: filterTolmac,
+          filter_tolmac: filterExamType === "teorija" ? filterTolmac : false,
+
           filter_categories: filterCategory || null,
         }),
       });
-      
+
       if (res.ok) {
         setSubscribeSuccess(true);
         setTimeout(() => {
           setSubscribeOpen(false);
           setSubscribeSuccess(false);
-          setSubscribeEmail('');
+          setSubscribeEmail("");
         }, 2000);
       }
     } catch (error) {
-      console.error('Error subscribing:', error);
+      console.error("Error subscribing:", error);
     }
   };
 
   const clearFilters = () => {
-    setFilterExamType('voznja');
+    setFilterExamType("voznja");
     setFilterTolmac(false);
-    setFilterObmocje('');
-    setFilterTown('');
-    setFilterCategory('');
+    setFilterObmocje("");
+    setFilterTown("");
+    setFilterCategory("");
   };
 
-  const filteredSlots = slots.filter(slot => {
+  const filteredSlots = slots.filter((slot) => {
     if (slot.places_left === 0) return false;
     if (filterExamType && slot.exam_type !== filterExamType) return false;
-    if (filterTolmac && !slot.tolmac) return false;
+    if (filterExamType === "teorija" && filterTolmac && !slot.tolmac)
+      return false;
     if (filterObmocje && slot.obmocje !== parseInt(filterObmocje)) return false;
     if (filterTown && slot.town !== filterTown) return false;
-    if (filterCategory && !slot.categories?.includes(filterCategory)) return false;
+    if (filterCategory && !slot.categories?.includes(filterCategory))
+      return false;
     return true;
   });
 
   const renderSlot = (slot, index) => {
-    if (viewMode === 'compact') {
+    if (viewMode === "compact") {
       return (
-        <div key={index} className="flex items-center justify-between py-2 px-4 border-b border-border hover:bg-accent/50 transition-colors">
+        <div
+          key={index}
+          className="flex items-center justify-between py-2 px-4 border-b border-border hover:bg-accent/50 transition-colors">
           <div className="flex items-center gap-6 flex-1">
             <span className="font-semibold min-w-[100px]">{slot.date_str}</span>
-            <span className="text-muted-foreground min-w-[60px]">{slot.time_str}</span>
-            <span className="text-sm text-muted-foreground min-w-[200px]">{slot.location}</span>
-            <span className="text-xs px-2 py-1 rounded bg-primary/10 text-primary">{slot.categories}</span>
+            <span className="text-muted-foreground min-w-[60px]">
+              {slot.time_str}
+            </span>
+            <span className="text-sm text-muted-foreground min-w-[200px]">
+              {slot.location}
+            </span>
+            <span className="text-xs px-2 py-1 rounded bg-primary/10 text-primary">
+              {slot.categories}
+            </span>
             {slot.exam_type && (
               <span className="text-xs px-2 py-1 rounded bg-secondary/10 text-secondary-foreground">
-                {slot.exam_type === 'voznja' ? t.examTypeDriving : t.examTypeTheory}
+                {slot.exam_type === "voznja"
+                  ? t.examTypeDriving
+                  : t.examTypeTheory}
               </span>
             )}
           </div>
           <div className="flex items-center gap-4">
             {slot.places_left && (
-              <span className="text-sm font-medium text-green-600">{slot.places_left}</span>
+              <span className="text-sm font-medium text-green-600">
+                {slot.places_left}
+              </span>
             )}
             {slot.tolmac && (
               <span className="text-xs px-2 py-1 rounded bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200">
@@ -245,7 +352,7 @@ export default function App() {
       );
     }
 
-    if (viewMode === 'list') {
+    if (viewMode === "list") {
       return (
         <Card key={index} className="hover:shadow-md transition-shadow">
           <CardContent className="p-4">
@@ -253,17 +360,29 @@ export default function App() {
               <div className="flex items-center gap-6">
                 <div>
                   <div className="font-semibold text-lg">{slot.date_str}</div>
-                  <div className="text-sm text-muted-foreground">{slot.time_str}</div>
+                  <div className="text-sm text-muted-foreground">
+                    {slot.time_str}
+                  </div>
                 </div>
                 <div className="border-l border-border pl-6">
-                  <div className="text-sm text-muted-foreground">{slot.location}</div>
-                  {slot.town && <div className="text-xs text-muted-foreground">{slot.town}</div>}
+                  <div className="text-sm text-muted-foreground">
+                    {slot.location}
+                  </div>
+                  {ADDRESS_MAP[slot.town] && (
+                    <div className="text-xs text-muted-foreground">
+                      {ADDRESS_MAP[slot.town]}
+                    </div>
+                  )}
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-xs px-2 py-1 rounded bg-primary/10 text-primary">{slot.categories}</span>
+                  <span className="text-xs px-2 py-1 rounded bg-primary/10 text-primary">
+                    {slot.categories}
+                  </span>
                   {slot.exam_type && (
                     <span className="text-xs px-2 py-1 rounded bg-secondary/10 text-secondary-foreground">
-                      {slot.exam_type === 'voznja' ? t.examTypeDriving : t.examTypeTheory}
+                      {slot.exam_type === "voznja"
+                        ? t.examTypeDriving
+                        : t.examTypeTheory}
                     </span>
                   )}
                 </div>
@@ -293,17 +412,27 @@ export default function App() {
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <span className="font-semibold text-lg">{slot.date_str}</span>
-              <span className="text-sm text-muted-foreground">{slot.time_str}</span>
+              <span className="text-sm text-muted-foreground">
+                {slot.time_str}
+              </span>
             </div>
             <div className="text-sm">
               <p className="text-muted-foreground">{slot.location}</p>
-              {slot.town && <p className="text-muted-foreground">{slot.town}</p>}
+              {ADDRESS_MAP[slot.town] && (
+                <p className="text-muted-foreground">
+                  {ADDRESS_MAP[slot.town]}
+                </p>
+              )}
             </div>
             <div className="flex items-center justify-between pt-2">
-              <span className="text-xs px-2 py-1 rounded bg-primary/10 text-primary">{slot.categories}</span>
+              <span className="text-xs px-2 py-1 rounded bg-primary/10 text-primary">
+                {slot.categories}
+              </span>
               {slot.exam_type && (
                 <span className="text-xs px-2 py-1 rounded bg-secondary/10 text-secondary-foreground">
-                  {slot.exam_type === 'voznja' ? t.examTypeDriving : t.examTypeTheory}
+                  {slot.exam_type === "voznja"
+                    ? t.examTypeDriving
+                    : t.examTypeTheory}
                 </span>
               )}
             </div>
@@ -336,20 +465,34 @@ export default function App() {
               <Link href="/questions">
                 <Button variant="outline" size="sm">
                   <MessageCircleQuestion className="h-4 w-4 mr-2" />
-                  <span className="hidden sm:inline">{lang === 'sl' ? 'Vprašanja' : 'Questions'}</span>
+                  <span className="hidden sm:inline">
+                    {lang === "sl" ? "Vprašanja" : "Questions"}
+                  </span>
                 </Button>
               </Link>
               <Link href="/learning">
                 <Button variant="outline" size="sm">
                   <Users className="h-4 w-4 mr-2" />
-                  <span className="hidden sm:inline">{lang === 'sl' ? 'Učenje' : 'Learning'}</span>
+                  <span className="hidden sm:inline">
+                    {lang === "sl" ? "Učenje" : "Learning"}
+                  </span>
                 </Button>
               </Link>
-              <Button variant="ghost" size="icon" onClick={() => setLang(lang === 'sl' ? 'en' : 'sl')}>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setLang(lang === "sl" ? "en" : "sl")}>
                 <Globe className="h-5 w-5" />
               </Button>
-              <Button variant="ghost" size="icon" onClick={() => setDarkMode(!darkMode)}>
-                {darkMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setDarkMode(!darkMode)}>
+                {darkMode ? (
+                  <Sun className="h-5 w-5" />
+                ) : (
+                  <Moon className="h-5 w-5" />
+                )}
               </Button>
             </div>
           </div>
@@ -363,7 +506,10 @@ export default function App() {
             {filteredSlots.length} {t.slotsFound}
           </p>
           <div className="flex items-center gap-4">
-            <ToggleGroup type="single" value={viewMode} onValueChange={(v) => v && setViewMode(v)}>
+            <ToggleGroup
+              type="single"
+              value={viewMode}
+              onValueChange={(v) => v && setViewMode(v)}>
               <ToggleGroupItem value="list" aria-label="List view">
                 <List className="h-4 w-4" />
               </ToggleGroupItem>
@@ -376,7 +522,10 @@ export default function App() {
             </ToggleGroup>
             {lastScraped && (
               <p className="text-sm text-muted-foreground">
-                {t.lastUpdated}: {new Date(lastScraped).toLocaleString(lang === 'sl' ? 'sl-SI' : 'en-US')}
+                {t.lastUpdated}:{" "}
+                {new Date(lastScraped).toLocaleString(
+                  lang === "sl" ? "sl-SI" : "en-US"
+                )}
               </p>
             )}
           </div>
@@ -408,39 +557,81 @@ export default function App() {
                       <div className="space-y-4 mt-4">
                         <div>
                           <Label>{t.email}</Label>
-                          <Input type="email" value={subscribeEmail} onChange={(e) => setSubscribeEmail(e.target.value)} placeholder="vas@email.si" />
+                          <Input
+                            type="email"
+                            value={subscribeEmail}
+                            onChange={(e) => setSubscribeEmail(e.target.value)}
+                            placeholder="vas@email.si"
+                          />
                         </div>
-                        <Button onClick={handleSubscribe} className="w-full">{t.subscribeBtn}</Button>
+                        <Button onClick={handleSubscribe} className="w-full">
+                          {t.subscribeBtn}
+                        </Button>
                       </div>
                     )}
                   </DialogContent>
                 </Dialog>
-                <Button variant="ghost" size="sm" onClick={clearFilters}>{t.clearFilters}</Button>
+                <Button variant="ghost" size="sm" onClick={clearFilters}>
+                  {t.clearFilters}
+                </Button>
               </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
               {/* Exam Type Toggle */}
+              {/* Exam Type Toggle */}
               <div>
                 <Label>{t.examType}</Label>
-                <ToggleGroup type="single" value={filterExamType} onValueChange={(v) => v && setFilterExamType(v)} className="justify-start mt-2">
-                  <ToggleGroupItem value="voznja" className="flex-1">{t.examTypeDriving}</ToggleGroupItem>
-                  <ToggleGroupItem value="teorija" className="flex-1">{t.examTypeTheory}</ToggleGroupItem>
+                <ToggleGroup
+                  type="single"
+                  value={filterExamType}
+                  onValueChange={(v) => {
+                    if (!v) return;
+                    setFilterExamType(v);
+                    if (v === "voznja") setFilterTolmac(false);
+                  }}
+                  className="justify-start mt-2">
+                  <ToggleGroupItem value="voznja" className="flex-1">
+                    {t.examTypeDriving}
+                  </ToggleGroupItem>
+                  <ToggleGroupItem value="teorija" className="flex-1">
+                    {t.examTypeTheory}
+                  </ToggleGroupItem>
                 </ToggleGroup>
               </div>
 
               {/* Region */}
               <div>
                 <Label>{t.region}</Label>
-                <Select value={filterObmocje || "all"} onValueChange={(v) => setFilterObmocje(v === "all" ? "" : v)}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                <Select
+                  value={filterObmocje || "all"}
+                  onValueChange={(v) => setFilterObmocje(v === "all" ? "" : v)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">{t.regionAll}</SelectItem>
-                    <SelectItem value="1">Območje 1</SelectItem>
-                    <SelectItem value="2">Območje 2</SelectItem>
-                    <SelectItem value="3">Območje 3</SelectItem>
-                    <SelectItem value="4">Območje 4</SelectItem>
-                    <SelectItem value="5">Območje 5</SelectItem>
+                    <SelectItem value="1">
+                      {lang === "sl" ? "Primorska/Goriška" : "Coastal/Western"}
+                    </SelectItem>
+                    <SelectItem value="2">
+                      {lang === "sl"
+                        ? "Osrednjeslovenska/Gorenjska"
+                        : "Central/UpperCarniola"}
+                    </SelectItem>
+                    <SelectItem value="3">
+                      {lang === "sl" ? "Celjska/Koroška" : "Celje/Carinthia"}
+                    </SelectItem>
+                    <SelectItem value="4">
+                      {lang === "sl"
+                        ? "Dolenjska/BelaKrajina"
+                        : "LowerCarniola/WhiteCarniola"}
+                    </SelectItem>
+                    <SelectItem value="5">
+                      {lang === "sl"
+                        ? "Štajerska/Prekmurje"
+                        : "Styria/Prekmurje"}
+                    </SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -448,12 +639,18 @@ export default function App() {
               {/* Town */}
               <div>
                 <Label>{t.town}</Label>
-                <Select value={filterTown || "all"} onValueChange={(v) => setFilterTown(v === "all" ? "" : v)}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                <Select
+                  value={filterTown || "all"}
+                  onValueChange={(v) => setFilterTown(v === "all" ? "" : v)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">{t.townAll}</SelectItem>
-                    {availableTowns.map(town => (
-                      <SelectItem key={town} value={town}>{town}</SelectItem>
+                    {availableTowns.map((town) => (
+                      <SelectItem key={town} value={town}>
+                        {town}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -462,14 +659,22 @@ export default function App() {
               {/* Categories with grouped display */}
               <div>
                 <Label>{t.categories}</Label>
-                <Select value={filterCategory || "all"} onValueChange={(v) => setFilterCategory(v === "all" ? "" : v)}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                <Select
+                  value={filterCategory || "all"}
+                  onValueChange={(v) =>
+                    setFilterCategory(v === "all" ? "" : v)
+                  }>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">{t.categoryAll}</SelectItem>
                     {CATEGORY_GROUPS.map((group, groupIndex) => (
                       <div key={groupIndex} className="flex gap-1 px-2 py-1">
-                        {group.map(cat => (
-                          <SelectItem key={cat} value={cat} className="flex-1">{cat}</SelectItem>
+                        {group.map((cat) => (
+                          <SelectItem key={cat} value={cat} className="flex-1">
+                            {cat}
+                          </SelectItem>
                         ))}
                       </div>
                     ))}
@@ -478,27 +683,38 @@ export default function App() {
               </div>
 
               {/* Tolmac */}
-              <div className="flex items-center space-x-2 pt-6">
-                <Switch id="tolmac" checked={filterTolmac} onCheckedChange={setFilterTolmac} />
-                <Label htmlFor="tolmac">{t.withTranslator}</Label>
-              </div>
+              {filterExamType === "teorija" && (
+                <div className="flex items-center space-x-2 pt-6">
+                  <Switch
+                    id="tolmac"
+                    checked={filterTolmac}
+                    onCheckedChange={setFilterTolmac}
+                  />
+                  <Label htmlFor="tolmac">{t.withTranslator}</Label>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
 
         {/* Slots Display */}
         {loading ? (
-          <div className="text-center py-12 text-muted-foreground">{t.loading}</div>
+          <div className="text-center py-12 text-muted-foreground">
+            {t.loading}
+          </div>
         ) : filteredSlots.length === 0 ? (
-          <div className="text-center py-12 text-muted-foreground">{t.noSlots}</div>
+          <div className="text-center py-12 text-muted-foreground">
+            {t.noSlots}
+          </div>
         ) : (
-          <div className={
-            viewMode === 'grid' 
-              ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4' 
-              : viewMode === 'compact'
-              ? 'border border-border rounded-lg overflow-hidden'
-              : 'space-y-3'
-          }>
+          <div
+            className={
+              viewMode === "grid"
+                ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
+                : viewMode === "compact"
+                  ? "border border-border rounded-lg overflow-hidden"
+                  : "space-y-3"
+            }>
             {filteredSlots.map((slot, index) => renderSlot(slot, index))}
           </div>
         )}
