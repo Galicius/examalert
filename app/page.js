@@ -455,292 +455,270 @@ export default function App() {
   };
 
   return (
-    <>
-      <Head>
-        <title>{t.title}</title>
-        <meta
-          name="description"
-          content={
-            lang === "sl"
-              ? "Poiščite razpoložljive termine za vozniški izpit v Sloveniji."
-              : "Find available driving exam slots in Slovenia."
-          }
-        />
-      </Head>
-      <div className="min-h-screen bg-background text-foreground">
-        {/* Header */}
-        <header className="border-b border-border bg-card">
-          <div className="container mx-auto px-4 py-4">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-              <h1 className="text-2xl font-bold">{t.title}</h1>
-              <div className="flex items-center gap-2 flex-wrap">
-                <Link href="/questions">
-                  <Button variant="outline" size="sm">
-                    <MessageCircleQuestion className="h-4 w-4 mr-2" />
-                    <span className="hidden sm:inline">
-                      {lang === "sl" ? "Vprašanja" : "Questions"}
-                    </span>
-                  </Button>
-                </Link>
-                <Link href="/learning">
-                  <Button variant="outline" size="sm">
-                    <Users className="h-4 w-4 mr-2" />
-                    <span className="hidden sm:inline">
-                      {lang === "sl" ? "Učenje" : "Learning"}
-                    </span>
-                  </Button>
-                </Link>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setLang(lang === "sl" ? "en" : "sl")}>
-                  <Globe className="h-5 w-5" />
+    <div className="min-h-screen bg-background text-foreground">
+      {/* Header */}
+      <header className="border-b border-border bg-card">
+        <div className="container mx-auto px-4 py-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <h1 className="text-2xl font-bold">{t.title}</h1>
+            <div className="flex items-center gap-2 flex-wrap">
+              <Link href="/questions">
+                <Button variant="outline" size="sm">
+                  <MessageCircleQuestion className="h-4 w-4 mr-2" />
+                  <span className="hidden sm:inline">
+                    {lang === "sl" ? "Vprašanja" : "Questions"}
+                  </span>
                 </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setDarkMode(!darkMode)}>
-                  {darkMode ? (
-                    <Sun className="h-5 w-5" />
-                  ) : (
-                    <Moon className="h-5 w-5" />
-                  )}
+              </Link>
+              <Link href="/learning">
+                <Button variant="outline" size="sm">
+                  <Users className="h-4 w-4 mr-2" />
+                  <span className="hidden sm:inline">
+                    {lang === "sl" ? "Učenje" : "Learning"}
+                  </span>
+                </Button>
+              </Link>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setLang(lang === "sl" ? "en" : "sl")}>
+                <Globe className="h-5 w-5" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setDarkMode(!darkMode)}>
+                {darkMode ? (
+                  <Sun className="h-5 w-5" />
+                ) : (
+                  <Moon className="h-5 w-5" />
+                )}
+              </Button>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <main className="container mx-auto px-4 py-8">
+        {/* Stats and View Switcher */}
+        <div className="mb-6 flex items-center justify-between">
+          <p className="text-sm text-muted-foreground">
+            {filteredSlots.length} {t.slotsFound}
+          </p>
+          <div className="flex items-center gap-4">
+            <ToggleGroup
+              type="single"
+              value={viewMode}
+              onValueChange={(v) => v && setViewMode(v)}>
+              <ToggleGroupItem value="list" aria-label="List view">
+                <List className="h-4 w-4" />
+              </ToggleGroupItem>
+              <ToggleGroupItem value="grid" aria-label="Grid view">
+                <LayoutGrid className="h-4 w-4" />
+              </ToggleGroupItem>
+              <ToggleGroupItem value="compact" aria-label="Compact view">
+                <AlignJustify className="h-4 w-4" />
+              </ToggleGroupItem>
+            </ToggleGroup>
+            {lastScraped && (
+              <p className="text-sm text-muted-foreground">
+                {t.lastUpdated}:{" "}
+                {new Date(lastScraped).toLocaleString(
+                  lang === "sl" ? "sl-SI" : "en-US"
+                )}
+              </p>
+            )}
+          </div>
+        </div>
+
+        {/* Filters */}
+        <Card className="mb-6">
+          <CardContent className="pt-6">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
+              <h2 className="text-lg font-semibold">{t.filterTitle}</h2>
+              <div className="flex items-center gap-2 flex-wrap">
+                <Dialog open={subscribeOpen} onOpenChange={setSubscribeOpen}>
+                  <DialogTrigger asChild>
+                    <Button variant="outline" size="sm">
+                      <Mail className="h-4 w-4 mr-2" />
+                      <span className="hidden sm:inline">{t.subscribe}</span>
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>{t.subscribe}</DialogTitle>
+                      <DialogDescription>{t.subscribeDesc}</DialogDescription>
+                    </DialogHeader>
+                    {subscribeSuccess ? (
+                      <div className="text-center py-4 text-green-600">
+                        {t.subscribeSuccess}
+                      </div>
+                    ) : (
+                      <div className="space-y-4 mt-4">
+                        <div>
+                          <Label>{t.email}</Label>
+                          <Input
+                            type="email"
+                            value={subscribeEmail}
+                            onChange={(e) => setSubscribeEmail(e.target.value)}
+                            placeholder="vas@email.si"
+                          />
+                        </div>
+                        <Button onClick={handleSubscribe} className="w-full">
+                          {t.subscribeBtn}
+                        </Button>
+                      </div>
+                    )}
+                  </DialogContent>
+                </Dialog>
+                <Button variant="ghost" size="sm" onClick={clearFilters}>
+                  {t.clearFilters}
                 </Button>
               </div>
             </div>
-          </div>
-        </header>
 
-        <main className="container mx-auto px-4 py-8">
-          {/* Stats and View Switcher */}
-          <div className="mb-6 flex items-center justify-between">
-            <p className="text-sm text-muted-foreground">
-              {filteredSlots.length} {t.slotsFound}
-            </p>
-            <div className="flex items-center gap-4">
-              <ToggleGroup
-                type="single"
-                value={viewMode}
-                onValueChange={(v) => v && setViewMode(v)}>
-                <ToggleGroupItem value="list" aria-label="List view">
-                  <List className="h-4 w-4" />
-                </ToggleGroupItem>
-                <ToggleGroupItem value="grid" aria-label="Grid view">
-                  <LayoutGrid className="h-4 w-4" />
-                </ToggleGroupItem>
-                <ToggleGroupItem value="compact" aria-label="Compact view">
-                  <AlignJustify className="h-4 w-4" />
-                </ToggleGroupItem>
-              </ToggleGroup>
-              {lastScraped && (
-                <p className="text-sm text-muted-foreground">
-                  {t.lastUpdated}:{" "}
-                  {new Date(lastScraped).toLocaleString(
-                    lang === "sl" ? "sl-SI" : "en-US"
-                  )}
-                </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+              {/* Exam Type Toggle */}
+              {/* Exam Type Toggle */}
+              <div>
+                <Label>{t.examType}</Label>
+                <ToggleGroup
+                  type="single"
+                  value={filterExamType}
+                  onValueChange={(v) => {
+                    if (!v) return;
+                    setFilterExamType(v);
+                    if (v === "voznja") setFilterTolmac(false);
+                  }}
+                  className="justify-start mt-2">
+                  <ToggleGroupItem value="voznja" className="flex-1">
+                    {t.examTypeDriving}
+                  </ToggleGroupItem>
+                  <ToggleGroupItem value="teorija" className="flex-1">
+                    {t.examTypeTheory}
+                  </ToggleGroupItem>
+                </ToggleGroup>
+              </div>
+
+              {/* Region */}
+              <div>
+                <Label>{t.region}</Label>
+                <Select
+                  value={filterObmocje || "all"}
+                  onValueChange={(v) => setFilterObmocje(v === "all" ? "" : v)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">{t.regionAll}</SelectItem>
+                    <SelectItem value="1">
+                      {lang === "sl" ? "Primorska/Goriška" : "Coastal/Western"}
+                    </SelectItem>
+                    <SelectItem value="2">
+                      {lang === "sl"
+                        ? "Osrednjeslovenska/Gorenjska"
+                        : "Central/UpperCarniola"}
+                    </SelectItem>
+                    <SelectItem value="3">
+                      {lang === "sl" ? "Celjska/Koroška" : "Celje/Carinthia"}
+                    </SelectItem>
+                    <SelectItem value="4">
+                      {lang === "sl"
+                        ? "Dolenjska/BelaKrajina"
+                        : "LowerCarniola/WhiteCarniola"}
+                    </SelectItem>
+                    <SelectItem value="5">
+                      {lang === "sl"
+                        ? "Štajerska/Prekmurje"
+                        : "Styria/Prekmurje"}
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Town */}
+              <div>
+                <Label>{t.town}</Label>
+                <Select
+                  value={filterTown || "all"}
+                  onValueChange={(v) => setFilterTown(v === "all" ? "" : v)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">{t.townAll}</SelectItem>
+                    {availableTowns.map((town) => (
+                      <SelectItem key={town} value={town}>
+                        {town}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Categories with grouped display */}
+              <div>
+                <Label>{t.categories}</Label>
+                <Select
+                  value={filterCategory || "all"}
+                  onValueChange={(v) =>
+                    setFilterCategory(v === "all" ? "" : v)
+                  }>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">{t.categoryAll}</SelectItem>
+                    {CATEGORY_GROUPS.map((group, groupIndex) => (
+                      <div key={groupIndex} className="flex gap-1 px-2 py-1">
+                        {group.map((cat) => (
+                          <SelectItem key={cat} value={cat} className="flex-1">
+                            {cat}
+                          </SelectItem>
+                        ))}
+                      </div>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Tolmac */}
+              {filterExamType === "teorija" && (
+                <div className="flex items-center space-x-2 pt-6">
+                  <Switch
+                    id="tolmac"
+                    checked={filterTolmac}
+                    onCheckedChange={setFilterTolmac}
+                  />
+                  <Label htmlFor="tolmac">{t.withTranslator}</Label>
+                </div>
               )}
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Slots Display */}
+        {loading ? (
+          <div className="text-center py-12 text-muted-foreground">
+            {t.loading}
           </div>
-
-          {/* Filters */}
-          <Card className="mb-6">
-            <CardContent className="pt-6">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
-                <h2 className="text-lg font-semibold">{t.filterTitle}</h2>
-                <div className="flex items-center gap-2 flex-wrap">
-                  <Dialog open={subscribeOpen} onOpenChange={setSubscribeOpen}>
-                    <DialogTrigger asChild>
-                      <Button variant="outline" size="sm">
-                        <Mail className="h-4 w-4 mr-2" />
-                        <span className="hidden sm:inline">{t.subscribe}</span>
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                      <DialogHeader>
-                        <DialogTitle>{t.subscribe}</DialogTitle>
-                        <DialogDescription>{t.subscribeDesc}</DialogDescription>
-                      </DialogHeader>
-                      {subscribeSuccess ? (
-                        <div className="text-center py-4 text-green-600">
-                          {t.subscribeSuccess}
-                        </div>
-                      ) : (
-                        <div className="space-y-4 mt-4">
-                          <div>
-                            <Label>{t.email}</Label>
-                            <Input
-                              type="email"
-                              value={subscribeEmail}
-                              onChange={(e) =>
-                                setSubscribeEmail(e.target.value)
-                              }
-                              placeholder="vas@email.si"
-                            />
-                          </div>
-                          <Button onClick={handleSubscribe} className="w-full">
-                            {t.subscribeBtn}
-                          </Button>
-                        </div>
-                      )}
-                    </DialogContent>
-                  </Dialog>
-                  <Button variant="ghost" size="sm" onClick={clearFilters}>
-                    {t.clearFilters}
-                  </Button>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-                {/* Exam Type Toggle */}
-                {/* Exam Type Toggle */}
-                <div>
-                  <Label>{t.examType}</Label>
-                  <ToggleGroup
-                    type="single"
-                    value={filterExamType}
-                    onValueChange={(v) => {
-                      if (!v) return;
-                      setFilterExamType(v);
-                      if (v === "voznja") setFilterTolmac(false);
-                    }}
-                    className="justify-start mt-2">
-                    <ToggleGroupItem value="voznja" className="flex-1">
-                      {t.examTypeDriving}
-                    </ToggleGroupItem>
-                    <ToggleGroupItem value="teorija" className="flex-1">
-                      {t.examTypeTheory}
-                    </ToggleGroupItem>
-                  </ToggleGroup>
-                </div>
-
-                {/* Region */}
-                <div>
-                  <Label>{t.region}</Label>
-                  <Select
-                    value={filterObmocje || "all"}
-                    onValueChange={(v) =>
-                      setFilterObmocje(v === "all" ? "" : v)
-                    }>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">{t.regionAll}</SelectItem>
-                      <SelectItem value="1">
-                        {lang === "sl"
-                          ? "Primorska/Goriška"
-                          : "Coastal/Western"}
-                      </SelectItem>
-                      <SelectItem value="2">
-                        {lang === "sl"
-                          ? "Osrednjeslovenska/Gorenjska"
-                          : "Central/UpperCarniola"}
-                      </SelectItem>
-                      <SelectItem value="3">
-                        {lang === "sl" ? "Celjska/Koroška" : "Celje/Carinthia"}
-                      </SelectItem>
-                      <SelectItem value="4">
-                        {lang === "sl"
-                          ? "Dolenjska/BelaKrajina"
-                          : "LowerCarniola/WhiteCarniola"}
-                      </SelectItem>
-                      <SelectItem value="5">
-                        {lang === "sl"
-                          ? "Štajerska/Prekmurje"
-                          : "Styria/Prekmurje"}
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Town */}
-                <div>
-                  <Label>{t.town}</Label>
-                  <Select
-                    value={filterTown || "all"}
-                    onValueChange={(v) => setFilterTown(v === "all" ? "" : v)}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">{t.townAll}</SelectItem>
-                      {availableTowns.map((town) => (
-                        <SelectItem key={town} value={town}>
-                          {town}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Categories with grouped display */}
-                <div>
-                  <Label>{t.categories}</Label>
-                  <Select
-                    value={filterCategory || "all"}
-                    onValueChange={(v) =>
-                      setFilterCategory(v === "all" ? "" : v)
-                    }>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">{t.categoryAll}</SelectItem>
-                      {CATEGORY_GROUPS.map((group, groupIndex) => (
-                        <div key={groupIndex} className="flex gap-1 px-2 py-1">
-                          {group.map((cat) => (
-                            <SelectItem
-                              key={cat}
-                              value={cat}
-                              className="flex-1">
-                              {cat}
-                            </SelectItem>
-                          ))}
-                        </div>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Tolmac */}
-                {filterExamType === "teorija" && (
-                  <div className="flex items-center space-x-2 pt-6">
-                    <Switch
-                      id="tolmac"
-                      checked={filterTolmac}
-                      onCheckedChange={setFilterTolmac}
-                    />
-                    <Label htmlFor="tolmac">{t.withTranslator}</Label>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Slots Display */}
-          {loading ? (
-            <div className="text-center py-12 text-muted-foreground">
-              {t.loading}
-            </div>
-          ) : filteredSlots.length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground">
-              {t.noSlots}
-            </div>
-          ) : (
-            <div
-              className={
-                viewMode === "grid"
-                  ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
-                  : viewMode === "compact"
-                    ? "border border-border rounded-lg overflow-hidden"
-                    : "space-y-3"
-              }>
-              {filteredSlots.map((slot, index) => renderSlot(slot, index))}
-            </div>
-          )}
-        </main>
-      </div>
-    </>
+        ) : filteredSlots.length === 0 ? (
+          <div className="text-center py-12 text-muted-foreground">
+            {t.noSlots}
+          </div>
+        ) : (
+          <div
+            className={
+              viewMode === "grid"
+                ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
+                : viewMode === "compact"
+                  ? "border border-border rounded-lg overflow-hidden"
+                  : "space-y-3"
+            }>
+            {filteredSlots.map((slot, index) => renderSlot(slot, index))}
+          </div>
+        )}
+      </main>
+    </div>
   );
 }
