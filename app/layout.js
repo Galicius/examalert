@@ -1,15 +1,19 @@
-'use client';
+import "./globals.css";
+import { AuthProvider } from "@/lib/auth";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 
-import './globals.css';
-import { AuthProvider } from '@/lib/auth';
+
+export const metadata = {
+  title: "Vozniški izpiti",
+  description: "Find available driving exam slots in Slovenia.",
+};
 
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <body>
-        <AuthProvider>
-          {children}
-        </AuthProvider>
+        <AuthProvider>{children}</AuthProvider>
+        <SpeedInsights />
       </body>
     </html>
   );
