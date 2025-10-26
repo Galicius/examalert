@@ -218,14 +218,16 @@ export async function GET(request) {
         return NextResponse.json({ error: "User not found" }, { status: 404 });
       }
 
-      // Get user's subscriptions
+      const userData = userResult.rows[0];
+
+      // Get user's subscriptions by email
       const subsResult = await query(
-        "SELECT id, filter_obmocje, filter_town, filter_exam_type, filter_tolmac, filter_categories, active, created_at FROM subscriptions WHERE user_id = $1 ORDER BY created_at DESC",
-        [user.id]
+        "SELECT id, filter_obmocje, filter_town, filter_exam_type, filter_tolmac, filter_categories, active, created_at FROM subscriptions WHERE email = $1 ORDER BY created_at DESC",
+        [userData.email]
       );
 
       return NextResponse.json({
-        user: userResult.rows[0],
+        user: userData,
         subscriptions: subsResult.rows
       });
     } catch (error) {
