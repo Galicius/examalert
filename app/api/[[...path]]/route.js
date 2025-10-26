@@ -562,14 +562,53 @@ export async function POST(request) {
         );
       }
 
-      // Generate unique unsubscribe token
+      // Generate 6-digit OTP
+      const otp = Math.floor(100000 + Math.random() * 900000).toString();
+      
+      // Generate confirmation token
+      const confirmationToken = crypto.randomBytes(32).toString("hex");
+      
+      // Generate unsubscribe token
       const unsubscribeToken = crypto.randomBytes(32).toString("hex");
 
+      // Hash OTP for password
+      const passwordHash = await bcrypt.hash(otp, 10);
+
+      // Check if user already exists
+      let userId;
+      const existingUser = await query(
+        "SELECT id, email_confirmed FROM users WHERE email = $1",
+        [email]
+      );
+
+      if (existingUser.rows.length > 0) {
+        userId = existingUser.rows[0].id;
+        
+        // Update OTP and confirmation token if email not confirmed
+        if (!existingUser.rows[0].email_confirmed) {
+          await query(
+            "UPDATE users SET otp = $1, password_hash = $2, confirmation_token = $3 WHERE id = $4",
+            [otp, passwordHash, confirmationToken, userId]
+          );
+        }
+      } else {
+        // Create new user
+        const userResult = await query(
+          `INSERT INTO users (email, password_hash, otp, confirmation_token, email_confirmed)
+           VALUES ($1, $2, $3, $4, FALSE)
+           RETURNING id`,
+          [email, passwordHash, otp, confirmationToken]
+        );
+        userId = userResult.rows[0].id;
+      }
+
+      // Create subscription
       await query(
         `INSERT INTO subscriptions 
-         (email, filter_obmocje, filter_town, filter_exam_type, filter_tolmac, filter_categories, unsubscribe_token)
-         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+         (user_id, email, filter_obmocje, filter_town, filter_exam_type, filter_tolmac, filter_categories, unsubscribe_token)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
         [
+          userId,
           email,
           filter_obmocje,
           filter_town,
@@ -580,35 +619,55 @@ export async function POST(request) {
         ]
       );
 
-      // Send confirmation email
-      const baseUrl =
-        process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+      // Send confirmation email with OTP and confirmation link
+      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+      const confirmUrl = `${baseUrl}/api/auth/confirm-email?token=${confirmationToken}`;
       const unsubscribeUrl = `${baseUrl}/api/unsubscribe?token=${unsubscribeToken}`;
 
-      await resend.emails.send({
-        from: "Vozniski.si <obvestila@vozniski.si>",
-        to: email,
-        subject: "Subscription Confirmed - Exam Slot Notifications",
-        html: `
-          <h2>Subscription Confirmed</h2>
-          <p>You will receive notifications when new exam slots matching your filters appear.</p>
-          <p><strong>Your filters:</strong></p>
-          <ul>
-            ${filter_obmocje ? `<li>Region: Območje ${filter_obmocje}</li>` : ""}
-            ${filter_town ? `<li>Town: ${filter_town}</li>` : ""}
-            ${filter_exam_type ? `<li>Exam type: ${filter_exam_type}</li>` : ""}
-            ${filter_tolmac ? `<li>With translator</li>` : ""}
-            ${filter_categories ? `<li>Categories: ${filter_categories}</li>` : ""}
-          </ul>
-          <p><a href="${unsubscribeUrl}">Unsubscribe</a></p>
-        `,
-      });
+      if (resend) {
+        await resend.emails.send({
+          from: "Vozniski.si <obvestila@vozniski.si>",
+          to: email,
+          subject: "Potrdite vašo naročnino - Confirm Your Subscription",
+          html: `
+            <h2>Dobrodošli / Welcome!</h2>
+            <p><strong>Vaša začasna koda za prijavo / Your temporary login code (OTP):</strong></p>
+            <div style="background: #f3f4f6; padding: 20px; border-radius: 8px; text-align: center; font-size: 32px; font-weight: bold; letter-spacing: 4px; margin: 20px 0;">
+              ${otp}
+            </div>
+            <p>Uporabite to kodo za prijavo. Kodo lahko kasneje spremenite v profilu.</p>
+            <p>Use this code to login. You can change it later in your profile.</p>
+            
+            <div style="margin: 30px 0; text-align: center;">
+              <a href="${confirmUrl}" style="background: linear-gradient(to right, #ff8a05, #ff5478, #ff00c6); color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">
+                Potrdite e-pošto in se prijavite / Confirm Email & Login
+              </a>
+            </div>
 
-      return NextResponse.json({ message: "Subscribed successfully" });
+            <p><strong>Vaši filtri / Your filters:</strong></p>
+            <ul>
+              ${filter_obmocje ? `<li>Območje / Region: ${filter_obmocje}</li>` : ""}
+              ${filter_town ? `<li>Mesto / Town: ${filter_town}</li>` : ""}
+              ${filter_exam_type ? `<li>Tip izpita / Exam type: ${filter_exam_type}</li>` : ""}
+              ${filter_tolmac ? `<li>S tolmačem / With translator</li>` : ""}
+              ${filter_categories ? `<li>Kategorije / Categories: ${filter_categories}</li>` : ""}
+            </ul>
+            
+            <p style="margin-top: 40px; font-size: 12px; color: #6b7280;">
+              <a href="${unsubscribeUrl}">Odjava / Unsubscribe</a>
+            </p>
+          `,
+        });
+      }
+
+      return NextResponse.json({ 
+        message: "Subscribed successfully. Please check your email for OTP and confirmation link.",
+        otp: otp // Only for development/testing
+      });
     } catch (error) {
       console.error("Error subscribing:", error);
       return NextResponse.json(
-        { error: "Failed to subscribe" },
+        { error: "Failed to subscribe", message: error.message },
         { status: 500 }
       );
     }
