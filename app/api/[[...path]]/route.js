@@ -575,40 +575,34 @@ export async function POST(request) {
       const passwordHash = await bcrypt.hash(otp, 10);
 
       // Check if user already exists
-      let userId;
       const existingUser = await query(
         "SELECT id, email_confirmed FROM users WHERE email = $1",
         [email]
       );
 
       if (existingUser.rows.length > 0) {
-        userId = existingUser.rows[0].id;
-        
         // Update OTP and confirmation token if email not confirmed
         if (!existingUser.rows[0].email_confirmed) {
           await query(
-            "UPDATE users SET otp = $1, password_hash = $2, confirmation_token = $3 WHERE id = $4",
-            [otp, passwordHash, confirmationToken, userId]
+            "UPDATE users SET otp = $1, password_hash = $2, confirmation_token = $3 WHERE email = $4",
+            [otp, passwordHash, confirmationToken, email]
           );
         }
       } else {
         // Create new user
-        const userResult = await query(
+        await query(
           `INSERT INTO users (email, password_hash, otp, confirmation_token, email_confirmed)
-           VALUES ($1, $2, $3, $4, FALSE)
-           RETURNING id`,
+           VALUES ($1, $2, $3, $4, FALSE)`,
           [email, passwordHash, otp, confirmationToken]
         );
-        userId = userResult.rows[0].id;
       }
 
       // Create subscription
       await query(
         `INSERT INTO subscriptions 
-         (user_id, email, filter_obmocje, filter_town, filter_exam_type, filter_tolmac, filter_categories, unsubscribe_token)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+         (email, filter_obmocje, filter_town, filter_exam_type, filter_tolmac, filter_categories, unsubscribe_token)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
         [
-          userId,
           email,
           filter_obmocje,
           filter_town,
