@@ -690,6 +690,62 @@ export default function App() {
           </CardContent>
         </Card>
 
+        {/* Subscribe Section with Gradient Button */}
+        <Card className="mb-6 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-950/20 dark:to-pink-950/20 border-purple-200 dark:border-purple-800">
+          <CardContent className="pt-6">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+              <div className="flex-1">
+                <h3 className="text-lg font-semibold mb-2 flex items-center gap-2">
+                  <Mail className="h-5 w-5" />
+                  {t.subscribe}
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  {t.subscribeDesc}
+                </p>
+              </div>
+              <div className="flex flex-col sm:flex-row gap-3 sm:items-end md:min-w-[400px]">
+                <div className="flex-1">
+                  <Input
+                    type="email"
+                    value={subscribeEmail}
+                    onChange={(e) => setSubscribeEmail(e.target.value)}
+                    placeholder="vas@email.si"
+                    disabled={subscribing}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        handleSubscribe();
+                      }
+                    }}
+                    data-testid="subscribe-email-input"
+                    className="h-12"
+                  />
+                </div>
+                <a
+                  href="#_"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    handleSubscribe();
+                  }}
+                  className="relative p-0.5 inline-flex items-center justify-center font-bold overflow-hidden group rounded-md"
+                  data-testid="subscribe-gradient-btn"
+                >
+                  <span className="w-full h-full bg-gradient-to-br from-[#ff8a05] via-[#ff5478] to-[#ff00c6] group-hover:from-[#ff00c6] group-hover:via-[#ff5478] group-hover:to-[#ff8a05] absolute"></span>
+                  <span className="relative px-6 py-3 transition-all ease-out bg-gray-900 rounded-md group-hover:bg-opacity-0 duration-400 min-w-[140px] flex items-center justify-center">
+                    {subscribing ? (
+                      <Loader2 className="h-5 w-5 animate-spin text-white" />
+                    ) : (
+                      <span className="relative text-white flex items-center gap-2">
+                        <Mail className="h-4 w-4" />
+                        {t.subscribeBtn}
+                      </span>
+                    )}
+                  </span>
+                </a>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Slots Display */}
         {loading ? (
           <div className="text-center py-12 text-muted-foreground">
