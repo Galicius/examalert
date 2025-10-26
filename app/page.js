@@ -269,6 +269,13 @@ export default function App() {
   };
 
   const handleSubscribe = async () => {
+    if (!subscribeEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(subscribeEmail)) {
+      toast.error("Please enter a valid email address");
+      return;
+    }
+
+    setSubscribing(true);
+
     try {
       const res = await fetch("/api/subscribe", {
         method: "POST",
@@ -279,21 +286,26 @@ export default function App() {
           filter_town: filterTown || null,
           filter_exam_type: filterExamType || null,
           filter_tolmac: filterExamType === "teorija" ? filterTolmac : false,
-
           filter_categories: filterCategory || null,
         }),
       });
 
+      const data = await res.json();
+
       if (res.ok) {
-        setSubscribeSuccess(true);
-        setTimeout(() => {
-          setSubscribeOpen(false);
-          setSubscribeSuccess(false);
-          setSubscribeEmail("");
-        }, 2000);
+        toast.success(
+          "Successfully subscribed! Check your email for OTP and confirmation link.",
+          { duration: 5000 }
+        );
+        setSubscribeEmail("");
+      } else {
+        toast.error(data.error || "Failed to subscribe");
       }
     } catch (error) {
       console.error("Error subscribing:", error);
+      toast.error("Error subscribing. Please try again.");
+    } finally {
+      setSubscribing(false);
     }
   };
 
