@@ -496,6 +496,16 @@ export default function App() {
                   </span>
                 </Button>
               </Link>
+              {isAuthenticated && (
+                <Link href="/profile">
+                  <Button variant="outline" size="sm" data-testid="profile-link-btn">
+                    <UserCircle className="h-4 w-4 mr-2" />
+                    <span className="hidden sm:inline">
+                      {lang === "sl" ? "Profil" : "Profile"}
+                    </span>
+                  </Button>
+                </Link>
+              )}
               <Button
                 variant="ghost"
                 size="icon"
