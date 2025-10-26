@@ -621,7 +621,7 @@ export async function POST(request) {
 
       // Send confirmation email with OTP and confirmation link
       const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
-      const confirmUrl = `${baseUrl}/api/auth/confirm-email?token=${confirmationToken}`;
+      const confirmUrl = `${baseUrl}/confirm-email?token=${confirmationToken}`;
       const unsubscribeUrl = `${baseUrl}/api/unsubscribe?token=${unsubscribeToken}`;
 
       if (resend) {
