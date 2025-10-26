@@ -330,11 +330,23 @@ export default function App() {
   });
 
   const renderSlot = (slot, index) => {
+    // Gradient colors for slots
+    const gradients = [
+      "from-blue-50 to-cyan-50 dark:from-blue-950/30 dark:to-cyan-950/30",
+      "from-purple-50 to-pink-50 dark:from-purple-950/30 dark:to-pink-950/30",
+      "from-green-50 to-emerald-50 dark:from-green-950/30 dark:to-emerald-950/30",
+      "from-orange-50 to-amber-50 dark:from-orange-950/30 dark:to-amber-950/30",
+      "from-rose-50 to-red-50 dark:from-rose-950/30 dark:to-red-950/30",
+    ];
+    const gradientClass = `bg-gradient-to-br ${gradients[index % gradients.length]}`;
+
     if (viewMode === "compact") {
       return (
         <div
           key={index}
-          className="flex items-center justify-between py-2 px-4 border-b border-border hover:bg-accent/50 transition-colors">
+          className={`flex items-center justify-between py-2 px-4 border-b border-border hover:bg-accent/50 transition-colors ${gradientClass}`}
+          data-testid={`slot-compact-${index}`}
+        >
           <div className="flex items-center gap-6 flex-1">
             <span className="font-semibold min-w-[100px]">{slot.date_str}</span>
             <span className="text-muted-foreground min-w-[60px]">
@@ -372,7 +384,11 @@ export default function App() {
 
     if (viewMode === "list") {
       return (
-        <Card key={index} className="hover:shadow-md transition-shadow">
+        <Card
+          key={index}
+          className={`hover:shadow-md transition-shadow ${gradientClass}`}
+          data-testid={`slot-list-${index}`}
+        >
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-6">
@@ -425,7 +441,11 @@ export default function App() {
 
     // Grid view
     return (
-      <Card key={index} className="hover:shadow-lg transition-shadow">
+      <Card
+        key={index}
+        className={`hover:shadow-lg transition-shadow ${gradientClass}`}
+        data-testid={`slot-grid-${index}`}
+      >
         <CardContent className="pt-6">
           <div className="space-y-2">
             <div className="flex items-center justify-between">
