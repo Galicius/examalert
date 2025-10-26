@@ -315,6 +315,45 @@ export default function App() {
     }
   };
 
+  const handleLogin = async () => {
+    if (!loginEmail || !loginPassword) {
+      toast.error("Please enter email and password");
+      return;
+    }
+
+    setLoggingIn(true);
+
+    try {
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: loginEmail,
+          password: loginPassword,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        localStorage.setItem("auth_token", data.token);
+        toast.success("Login successful!");
+        setLoginOpen(false);
+        setLoginEmail("");
+        setLoginPassword("");
+        // Reload to update auth state
+        window.location.reload();
+      } else {
+        toast.error(data.error || "Login failed");
+      }
+    } catch (error) {
+      console.error("Error logging in:", error);
+      toast.error("Error logging in. Please try again.");
+    } finally {
+      setLoggingIn(false);
+    }
+  };
+
   const clearFilters = () => {
     setFilterExamType("voznja");
     setFilterTolmac(false);
