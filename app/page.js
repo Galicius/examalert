@@ -565,40 +565,6 @@ export default function App() {
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
               <h2 className="text-lg font-semibold">{t.filterTitle}</h2>
               <div className="flex items-center gap-2 flex-wrap">
-                <Dialog open={subscribeOpen} onOpenChange={setSubscribeOpen}>
-                  <DialogTrigger asChild>
-                    <Button variant="outline" size="sm">
-                      <Mail className="h-4 w-4 mr-2" />
-                      <span className="hidden sm:inline">{t.subscribe}</span>
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>{t.subscribe}</DialogTitle>
-                      <DialogDescription>{t.subscribeDesc}</DialogDescription>
-                    </DialogHeader>
-                    {subscribeSuccess ? (
-                      <div className="text-center py-4 text-green-600">
-                        {t.subscribeSuccess}
-                      </div>
-                    ) : (
-                      <div className="space-y-4 mt-4">
-                        <div>
-                          <Label>{t.email}</Label>
-                          <Input
-                            type="email"
-                            value={subscribeEmail}
-                            onChange={(e) => setSubscribeEmail(e.target.value)}
-                            placeholder="vas@email.si"
-                          />
-                        </div>
-                        <Button onClick={handleSubscribe} className="w-full">
-                          {t.subscribeBtn}
-                        </Button>
-                      </div>
-                    )}
-                  </DialogContent>
-                </Dialog>
                 <Button variant="ghost" size="sm" onClick={clearFilters}>
                   {t.clearFilters}
                 </Button>
@@ -606,7 +572,6 @@ export default function App() {
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-              {/* Exam Type Toggle */}
               {/* Exam Type Toggle */}
               <div>
                 <Label>{t.examType}</Label>
