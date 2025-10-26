@@ -1002,6 +1002,85 @@ export async function POST(request) {
 export async function PUT(request) {
   const { pathname } = new URL(request.url);
 
+  // PUT /api/profile - Update user profile
+  if (pathname === "/api/profile") {
+    const user = verifyUserToken(request);
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    await ensureDB();
+
+    try {
+      const body = await request.json();
+      const { username, current_password, new_password } = body;
+
+      // Validate inputs
+      if (username) {
+        // Check if username already exists
+        const existing = await query(
+          "SELECT id FROM users WHERE username = $1 AND id != $2",
+          [username, user.id]
+        );
+        
+        if (existing.rows.length > 0) {
+          return NextResponse.json(
+            { error: "Username already taken" },
+            { status: 400 }
+          );
+        }
+
+        await query(
+          "UPDATE users SET username = $1 WHERE id = $2",
+          [username, user.id]
+        );
+      }
+
+      // Change password if provided
+      if (new_password) {
+        if (!current_password) {
+          return NextResponse.json(
+            { error: "Current password required" },
+            { status: 400 }
+          );
+        }
+
+        // Verify current password
+        const userResult = await query(
+          "SELECT password_hash FROM users WHERE id = $1",
+          [user.id]
+        );
+
+        const validPassword = await bcrypt.compare(
+          current_password,
+          userResult.rows[0].password_hash
+        );
+
+        if (!validPassword) {
+          return NextResponse.json(
+            { error: "Invalid current password" },
+            { status: 401 }
+          );
+        }
+
+        // Hash and update new password
+        const newPasswordHash = await bcrypt.hash(new_password, 10);
+        await query(
+          "UPDATE users SET password_hash = $1, otp = NULL WHERE id = $2",
+          [newPasswordHash, user.id]
+        );
+      }
+
+      return NextResponse.json({ message: "Profile updated successfully" });
+    } catch (error) {
+      console.error("Error updating profile:", error);
+      return NextResponse.json(
+        { error: "Failed to update profile", message: error.message },
+        { status: 500 }
+      );
+    }
+  }
+
   if (pathname.match(/^\/api\/questions\/\d+$/)) {
     // Verify admin
     const admin = verifyAdminToken(request);
