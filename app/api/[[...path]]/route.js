@@ -1147,6 +1147,39 @@ export async function PUT(request) {
 export async function DELETE(request) {
   const { pathname } = new URL(request.url);
 
+  // DELETE /api/profile - Delete user account
+  if (pathname === "/api/profile") {
+    const user = verifyUserToken(request);
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    await ensureDB();
+
+    try {
+      // Delete user (cascades to subscriptions and other related data)
+      const result = await query(
+        "DELETE FROM users WHERE id = $1 RETURNING id",
+        [user.id]
+      );
+
+      if (result.rows.length === 0) {
+        return NextResponse.json(
+          { error: "User not found" },
+          { status: 404 }
+        );
+      }
+
+      return NextResponse.json({ message: "Account deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting account:", error);
+      return NextResponse.json(
+        { error: "Failed to delete account", message: error.message },
+        { status: 500 }
+      );
+    }
+  }
+
   if (pathname.match(/^\/api\/questions\/\d+$/)) {
     // Verify admin
     const admin = verifyAdminToken(request);
