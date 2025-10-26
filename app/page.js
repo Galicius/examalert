@@ -330,15 +330,8 @@ export default function App() {
   });
 
   const renderSlot = (slot, index) => {
-    // Gradient colors for slots
-    const gradients = [
-      "from-blue-50 to-cyan-50 dark:from-blue-950/30 dark:to-cyan-950/30",
-      "from-purple-50 to-pink-50 dark:from-purple-950/30 dark:to-pink-950/30",
-      "from-green-50 to-emerald-50 dark:from-green-950/30 dark:to-emerald-950/30",
-      "from-orange-50 to-amber-50 dark:from-orange-950/30 dark:to-amber-950/30",
-      "from-rose-50 to-red-50 dark:from-rose-950/30 dark:to-red-950/30",
-    ];
-    const gradientClass = `bg-gradient-to-br ${gradients[index % gradients.length]}`;
+    // Single subtle gradient for all slots
+    const gradientClass = "bg-gradient-to-r from-slate-50 to-gray-50 dark:from-slate-900/30 dark:to-gray-900/30";
 
     if (viewMode === "compact") {
       return (
