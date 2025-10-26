@@ -554,7 +554,7 @@ export default function App() {
                   </span>
                 </Button>
               </Link>
-              {isAuthenticated && (
+              {isAuthenticated ? (
                 <Link href="/profile">
                   <Button variant="outline" size="sm" data-testid="profile-link-btn">
                     <UserCircle className="h-4 w-4 mr-2" />
@@ -563,6 +563,83 @@ export default function App() {
                     </span>
                   </Button>
                 </Link>
+              ) : (
+                <Dialog open={loginOpen} onOpenChange={setLoginOpen}>
+                  <DialogTrigger asChild>
+                    <Button variant="outline" size="sm" data-testid="login-btn">
+                      <UserCircle className="h-4 w-4 mr-2" />
+                      <span className="hidden sm:inline">
+                        {lang === "sl" ? "Prijava" : "Login"}
+                      </span>
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>
+                        {lang === "sl" ? "Prijava" : "Login"}
+                      </DialogTitle>
+                      <DialogDescription>
+                        {lang === "sl"
+                          ? "Prijavite se s svojo e-pošto in OTP kodo ali geslom"
+                          : "Login with your email and OTP code or password"}
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 mt-4">
+                      <div>
+                        <Label htmlFor="login-email">
+                          {lang === "sl" ? "E-pošta" : "Email"}
+                        </Label>
+                        <Input
+                          id="login-email"
+                          type="email"
+                          value={loginEmail}
+                          onChange={(e) => setLoginEmail(e.target.value)}
+                          placeholder="vas@email.si"
+                          disabled={loggingIn}
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="login-password">
+                          {lang === "sl" ? "Geslo / OTP" : "Password / OTP"}
+                        </Label>
+                        <Input
+                          id="login-password"
+                          type="password"
+                          value={loginPassword}
+                          onChange={(e) => setLoginPassword(e.target.value)}
+                          placeholder={
+                            lang === "sl"
+                              ? "Vnesite geslo ali OTP kodo"
+                              : "Enter password or OTP code"
+                          }
+                          disabled={loggingIn}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              handleLogin();
+                            }
+                          }}
+                        />
+                      </div>
+                      <Button
+                        onClick={handleLogin}
+                        className="w-full"
+                        disabled={loggingIn}
+                        data-testid="login-submit-btn"
+                      >
+                        {loggingIn ? (
+                          <>
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            {lang === "sl" ? "Prijavljanje..." : "Logging in..."}
+                          </>
+                        ) : lang === "sl" ? (
+                          "Prijava"
+                        ) : (
+                          "Login"
+                        )}
+                      </Button>
+                    </div>
+                  </DialogContent>
+                </Dialog>
               )}
               <Button
                 variant="ghost"
