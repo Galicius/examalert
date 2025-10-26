@@ -191,6 +191,8 @@ const translations = {
 };
 
 export default function App() {
+  const { isAuthenticated, user } = useAuth();
+  const router = useRouter();
   const [darkMode, setDarkMode] = useState(false);
   const [lang, setLang] = useState("sl");
   const [slots, setSlots] = useState([]);
@@ -207,8 +209,7 @@ export default function App() {
 
   // Subscription
   const [subscribeEmail, setSubscribeEmail] = useState("");
-  const [subscribeOpen, setSubscribeOpen] = useState(false);
-  const [subscribeSuccess, setSubscribeSuccess] = useState(false);
+  const [subscribing, setSubscribing] = useState(false);
 
   const t = translations[lang];
 
