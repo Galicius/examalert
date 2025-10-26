@@ -145,6 +145,98 @@ export async function GET(request) {
     return NextResponse.json({ valid: true, id: user.id, username: user.username, email: user.email });
   }
 
+  // GET /api/auth/confirm-email - Confirm email via token
+  if (pathname === "/api/auth/confirm-email") {
+    await ensureDB();
+    const url = new URL(request.url);
+    const token = url.searchParams.get("token");
+
+    if (!token) {
+      return NextResponse.json({ error: "Token required" }, { status: 400 });
+    }
+
+    try {
+      // Find user by confirmation token
+      const result = await query(
+        "SELECT id, email, username FROM users WHERE confirmation_token = $1 AND email_confirmed = FALSE",
+        [token]
+      );
+
+      if (result.rows.length === 0) {
+        return NextResponse.json(
+          { error: "Invalid or expired token" },
+          { status: 400 }
+        );
+      }
+
+      const user = result.rows[0];
+
+      // Mark email as confirmed
+      await query(
+        "UPDATE users SET email_confirmed = TRUE, confirmation_token = NULL WHERE id = $1",
+        [user.id]
+      );
+
+      // Generate JWT token for auto-login
+      const authToken = jwt.sign(
+        { id: user.id, username: user.username, email: user.email },
+        process.env.JWT_SECRET || "default-secret-key",
+        { expiresIn: "7d" }
+      );
+
+      return NextResponse.json({
+        message: "Email confirmed successfully",
+        token: authToken,
+        user: { id: user.id, username: user.username, email: user.email }
+      });
+    } catch (error) {
+      console.error("Error confirming email:", error);
+      return NextResponse.json(
+        { error: "Failed to confirm email" },
+        { status: 500 }
+      );
+    }
+  }
+
+  // GET /api/profile - Get user profile
+  if (pathname === "/api/profile") {
+    const user = verifyUserToken(request);
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    await ensureDB();
+
+    try {
+      // Get user details
+      const userResult = await query(
+        "SELECT id, email, username, email_confirmed, notification_count, created_at FROM users WHERE id = $1",
+        [user.id]
+      );
+
+      if (userResult.rows.length === 0) {
+        return NextResponse.json({ error: "User not found" }, { status: 404 });
+      }
+
+      // Get user's subscriptions
+      const subsResult = await query(
+        "SELECT id, filter_obmocje, filter_town, filter_exam_type, filter_tolmac, filter_categories, active, created_at FROM subscriptions WHERE user_id = $1 ORDER BY created_at DESC",
+        [user.id]
+      );
+
+      return NextResponse.json({
+        user: userResult.rows[0],
+        subscriptions: subsResult.rows
+      });
+    } catch (error) {
+      console.error("Error fetching profile:", error);
+      return NextResponse.json(
+        { error: "Failed to fetch profile" },
+        { status: 500 }
+      );
+    }
+  }
+
   // GET /api/questions
   if (pathname === "/api/questions") {
     await ensureDB();
