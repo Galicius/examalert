@@ -17,4 +17,3 @@ A Next.js application for monitoring and tracking available driving and theory e
 - **Backend**: Next.js API Routes
 - **Database**: Supabase (PostgreSQL) - for subscriptions and questions
 - **Email**: Resend API
-- **External Scraper API**: https://cppapp-v25wkpukcq-ew.a.run.app/slots_all
