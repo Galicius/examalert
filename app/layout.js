@@ -10,10 +10,9 @@ export default function RootLayout({ children }) {
         <script src="https://t.contentsquare.net/uxa/5ce2d4ab93a5d.js"></script>
       </head>
       <body>
-        <AuthProvider>
-          {children}
-        </AuthProvider>
+        <AuthProvider>{children}</AuthProvider>
       </body>
     </html>
   );
 }
+
