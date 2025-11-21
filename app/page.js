@@ -1,22 +1,17 @@
 "use client";
 import Head from "next/head";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import {
-  Moon,
-  Sun,
-  Globe,
-  Mail,
   LayoutGrid,
   List,
   AlignJustify,
-  MessageCircleQuestion,
-  Users,
+  Loader2,
 } from "lucide-react";
-import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -34,6 +29,8 @@ import {
 } from "@/components/ui/dialog";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Input } from "@/components/ui/input";
+import { useSettings } from "@/lib/settings";
+import { HeroSubscription } from "@/components/HeroSubscription";
 
 const OBMOCJE_MAP = {
   1: [
@@ -140,7 +137,7 @@ const translations = {
     clearFilters: "Počisti filtre",
     subscribe: "Naroči se na obvestila",
     subscribeDesc:
-      "Prejemajte e-poštna obvestila, ko se pojavi nov termin, ki ustreza vašim filtrom",
+      "Izpolnite spodnje podatke, da boste obveščeni o novih terminih.",
     email: "E-pošta",
     subscribeBtn: "Naroči se",
     subscribeSuccess: "Uspešno ste se naročili na obvestila!",
@@ -150,6 +147,7 @@ const translations = {
     viewGrid: "Mreža",
     viewCompact: "Kompaktno",
     categoryAll: "Vse kategorije",
+    validationError: "Prosimo, izpolnite vsa obvezna polja (E-pošta, Kategorija, Tip izpita ter Območje ali Mesto).",
   },
   en: {
     title: "Driving Exam Slot Finder",
@@ -172,7 +170,7 @@ const translations = {
     clearFilters: "Clear filters",
     subscribe: "Subscribe to notifications",
     subscribeDesc:
-      "Receive email notifications when new slots matching your filters appear",
+      "Fill out the details below to get notified about new slots.",
     email: "Email",
     subscribeBtn: "Subscribe",
     subscribeSuccess: "Successfully subscribed to notifications!",
@@ -182,16 +180,18 @@ const translations = {
     viewGrid: "Grid",
     viewCompact: "Compact",
     categoryAll: "All categories",
+    validationError: "Please fill in all required fields (Email, Category, Exam Type, and Region or Town).",
   },
 };
 
 export default function App() {
-  const [darkMode, setDarkMode] = useState(false);
-  const [lang, setLang] = useState("sl");
+  const { lang } = useSettings();
   const [slots, setSlots] = useState([]);
   const [loading, setLoading] = useState(true);
   const [lastScraped, setLastScraped] = useState(null);
   const [viewMode, setViewMode] = useState("list");
+  const [visibleCount, setVisibleCount] = useState(12);
+  const observerTarget = useRef(null);
 
   // Filters
   const [filterExamType, setFilterExamType] = useState("voznja");
@@ -200,53 +200,75 @@ export default function App() {
   const [filterTown, setFilterTown] = useState("");
   const [filterCategory, setFilterCategory] = useState("");
 
-  // Subscription
+  // Subscription State
   const [subscribeEmail, setSubscribeEmail] = useState("");
   const [subscribeOpen, setSubscribeOpen] = useState(false);
   const [subscribeSuccess, setSubscribeSuccess] = useState(false);
+  const [subExamType, setSubExamType] = useState("voznja");
+  const [subCategory, setSubCategory] = useState("");
+  const [subRegion, setSubRegion] = useState("");
+  const [subTown, setSubTown] = useState("");
+  const [subError, setSubError] = useState("");
+  const [subscribing, setSubscribing] = useState(false);
+  const [subTolmac, setSubTolmac] = useState(false);
 
   const t = translations[lang];
 
-  // Load theme from localStorage on mount
-  useEffect(() => {
-    const savedTheme = localStorage.getItem("theme");
-    if (savedTheme === "dark") {
-      setDarkMode(true);
-    }
-  }, []);
-
-  // Get available towns based on selected region
+  // Derived state for main filters
   const availableTowns = useMemo(() => {
-    if (!filterObmocje) {
-      return [...new Set(slots.map((s) => s.town).filter(Boolean))];
+    if (filterObmocje && OBMOCJE_MAP[filterObmocje]) {
+      return OBMOCJE_MAP[filterObmocje];
     }
-    return OBMOCJE_MAP[parseInt(filterObmocje)] || [];
-  }, [filterObmocje, slots]);
+    return Object.values(OBMOCJE_MAP).flat().sort();
+  }, [filterObmocje]);
 
-  // Reset town when region changes
-  useEffect(() => {
-    if (filterObmocje && filterTown) {
-      const validTowns = OBMOCJE_MAP[parseInt(filterObmocje)] || [];
-      if (!validTowns.includes(filterTown)) {
-        setFilterTown("");
-      }
+  // Derived state for subscription filters
+  const subAvailableTowns = useMemo(() => {
+    if (subRegion && OBMOCJE_MAP[subRegion]) {
+      return OBMOCJE_MAP[subRegion];
     }
-  }, [filterObmocje, filterTown]);
+    return Object.values(OBMOCJE_MAP).flat().sort();
+  }, [subRegion]);
 
-  // Save theme to localStorage and apply
-  useEffect(() => {
-    if (darkMode) {
-      document.documentElement.classList.add("dark");
-      localStorage.setItem("theme", "dark");
-    } else {
-      document.documentElement.classList.remove("dark");
-      localStorage.setItem("theme", "light");
-    }
-  }, [darkMode]);
+  const availableRegions = Object.keys(OBMOCJE_MAP);
+  const availableCategories = CATEGORY_GROUPS.flat();
 
   useEffect(() => {
     fetchSlots();
   }, []);
+
+  // Infinite Scroll Observer
+  // Sync subscription filters with homepage filters when dialog opens
+  useEffect(() => {
+    if (subscribeOpen) {
+      setSubExamType(filterExamType);
+      setSubRegion(filterObmocje);
+      setSubTown(filterTown);
+      setSubCategory(filterCategory);
+      setSubTolmac(filterTolmac);
+    }
+  }, [subscribeOpen]);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          setVisibleCount((prev) => prev + 12);
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    if (observerTarget.current) {
+      observer.observe(observerTarget.current);
+    }
+
+    return () => {
+      if (observerTarget.current) {
+        observer.unobserve(observerTarget.current);
+      }
+    };
+  }, [slots, filterExamType, filterObmocje, filterTown, filterCategory]);
 
   const fetchSlots = async () => {
     try {
@@ -263,18 +285,26 @@ export default function App() {
   };
 
   const handleSubscribe = async () => {
+    setSubError("");
+    
+    // Validation
+    if (!subscribeEmail || !subCategory || !subExamType || (!subRegion && !subTown)) {
+      setSubError(t.validationError);
+      return;
+    }
+
+    setSubscribing(true);
     try {
       const res = await fetch("/api/subscribe", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           email: subscribeEmail,
-          filter_obmocje: filterObmocje ? parseInt(filterObmocje) : null,
-          filter_town: filterTown || null,
-          filter_exam_type: filterExamType || null,
-          filter_tolmac: filterExamType === "teorija" ? filterTolmac : false,
-
-          filter_categories: filterCategory || null,
+          filter_obmocje: subRegion ? parseInt(subRegion) : null,
+          filter_town: subTown || null,
+          filter_exam_type: subExamType,
+          filter_categories: subCategory,
+          filter_tolmac: subTolmac,
         }),
       });
 
@@ -284,10 +314,15 @@ export default function App() {
           setSubscribeOpen(false);
           setSubscribeSuccess(false);
           setSubscribeEmail("");
+          setSubCategory("");
+          setSubRegion("");
+          setSubTown("");
         }, 2000);
       }
     } catch (error) {
       console.error("Error subscribing:", error);
+    } finally {
+      setSubscribing(false);
     }
   };
 
@@ -311,40 +346,32 @@ export default function App() {
     return true;
   });
 
+  const visibleSlots = filteredSlots.slice(0, visibleCount);
+
   const renderSlot = (slot, index) => {
+    const gradientClass = "bg-gradient-to-br from-card to-muted/30 border-l-4 border-l-primary";
+    
     if (viewMode === "compact") {
       return (
         <div
           key={index}
-          className="flex items-center justify-between py-2 px-4 border-b border-border hover:bg-accent/50 transition-colors">
-          <div className="flex items-center gap-6 flex-1">
-            <span className="font-semibold min-w-[100px]">{slot.date_str}</span>
-            <span className="text-muted-foreground min-w-[60px]">
+          className={`flex items-center justify-between py-3 px-4 border-b border-border hover:bg-accent/50 transition-colors ${gradientClass} rounded-md mb-2`}>
+          <div className="flex items-center gap-4 flex-1 overflow-hidden">
+            <span className="font-semibold min-w-[90px]">{slot.date_str}</span>
+            <span className="text-muted-foreground min-w-[50px]">
               {slot.time_str}
             </span>
-            <span className="text-sm text-muted-foreground min-w-[200px]">
+            <span className="text-sm text-muted-foreground truncate">
               {slot.location}
             </span>
-            <span className="text-xs px-2 py-1 rounded bg-primary/10 text-primary">
+          </div>
+          <div className="flex items-center gap-2 ml-2">
+             <span className="text-xs px-2 py-1 rounded bg-primary/10 text-primary whitespace-nowrap">
               {slot.categories}
             </span>
-            {slot.exam_type && (
-              <span className="text-xs px-2 py-1 rounded bg-secondary/10 text-secondary-foreground">
-                {slot.exam_type === "voznja"
-                  ? t.examTypeDriving
-                  : t.examTypeTheory}
-              </span>
-            )}
-          </div>
-          <div className="flex items-center gap-4">
             {slot.places_left && (
-              <span className="text-sm font-medium text-green-600">
+              <span className="text-sm font-medium text-green-600 whitespace-nowrap">
                 {slot.places_left}
-              </span>
-            )}
-            {slot.tolmac && (
-              <span className="text-xs px-2 py-1 rounded bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200">
-                Tolmač
               </span>
             )}
           </div>
@@ -354,50 +381,54 @@ export default function App() {
 
     if (viewMode === "list") {
       return (
-        <Card key={index} className="hover:shadow-md transition-shadow">
+        <Card key={index} className={`hover:shadow-md transition-all duration-300 ${gradientClass}`}>
           <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-start sm:items-center gap-4 sm:gap-6">
                 <div>
-                  <div className="font-semibold text-lg">{slot.date_str}</div>
-                  <div className="text-sm text-muted-foreground">
+                  <div className="font-bold text-lg">{slot.date_str}</div>
+                  <div className="text-sm text-muted-foreground font-medium">
                     {slot.time_str}
                   </div>
                 </div>
-                <div className="border-l border-border pl-6">
-                  <div className="text-sm text-muted-foreground">
+                <div className="border-l border-border pl-4 sm:pl-6">
+                  <div className="font-medium text-foreground">
                     {slot.town}
                   </div>
                   {ADDRESS_MAP[slot.town] && (
-                    <div className="text-xs text-muted-foreground">
+                    <div className="text-xs text-muted-foreground mt-0.5">
                       {ADDRESS_MAP[slot.town]}
                     </div>
                   )}
                 </div>
+              </div>
+              
+              <div className="flex items-center justify-between sm:justify-end gap-4 w-full sm:w-auto mt-2 sm:mt-0">
                 <div className="flex items-center gap-2">
-                  <span className="text-xs px-2 py-1 rounded bg-primary/10 text-primary">
+                  <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-primary/10 text-primary">
                     {slot.categories}
                   </span>
                   {slot.exam_type && (
-                    <span className="text-xs px-2 py-1 rounded bg-secondary/10 text-secondary-foreground">
+                    <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-secondary text-secondary-foreground">
                       {slot.exam_type === "voznja"
                         ? t.examTypeDriving
                         : t.examTypeTheory}
                     </span>
                   )}
                 </div>
-              </div>
-              <div className="flex items-center gap-4">
-                {slot.places_left && (
-                  <span className="text-sm font-medium text-green-600">
-                    {t.places}: {slot.places_left}
-                  </span>
-                )}
-                {slot.tolmac && (
-                  <span className="text-xs px-2 py-1 rounded bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200">
-                    {t.withTranslator}
-                  </span>
-                )}
+                
+                <div className="flex items-center gap-3">
+                  {slot.places_left && (
+                    <span className="text-sm font-bold text-green-600 bg-green-50 dark:bg-green-900/20 px-2 py-1 rounded">
+                      {t.places}: {slot.places_left}
+                    </span>
+                  )}
+                  {slot.tolmac && (
+                    <span className="text-xs px-2 py-1 rounded bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200">
+                      {t.withTranslator}
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
           </CardContent>
@@ -407,38 +438,38 @@ export default function App() {
 
     // Grid view
     return (
-      <Card key={index} className="hover:shadow-lg transition-shadow">
+      <Card key={index} className={`hover:shadow-lg transition-all duration-300 ${gradientClass}`}>
         <CardContent className="pt-6">
-          <div className="space-y-2">
+          <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <span className="font-semibold text-lg">{slot.date_str}</span>
-              <span className="text-sm text-muted-foreground">
+              <span className="font-bold text-lg">{slot.date_str}</span>
+              <span className="text-sm font-medium text-muted-foreground bg-background/50 px-2 py-1 rounded">
                 {slot.time_str}
               </span>
             </div>
             <div className="text-sm">
-              <p className="text-muted-foreground">{slot.town}</p>
+              <p className="font-medium text-foreground">{slot.town}</p>
               {ADDRESS_MAP[slot.town] && (
-                <p className="text-muted-foreground">
+                <p className="text-muted-foreground text-xs mt-1">
                   {ADDRESS_MAP[slot.town]}
                 </p>
               )}
             </div>
             <div className="flex items-center justify-between pt-2">
-              <span className="text-xs px-2 py-1 rounded bg-primary/10 text-primary">
+              <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-primary/10 text-primary">
                 {slot.categories}
               </span>
               {slot.exam_type && (
-                <span className="text-xs px-2 py-1 rounded bg-secondary/10 text-secondary-foreground">
+                <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-secondary text-secondary-foreground">
                   {slot.exam_type === "voznja"
                     ? t.examTypeDriving
                     : t.examTypeTheory}
                 </span>
               )}
             </div>
-            <div className="flex items-center justify-between pt-2">
+            <div className="flex items-center justify-between pt-2 border-t border-border/50 mt-2">
               {slot.places_left && (
-                <span className="text-sm font-medium text-green-600">
+                <span className="text-sm font-bold text-green-600">
                   {t.places}: {slot.places_left}
                 </span>
               )}
@@ -455,57 +486,19 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      {/* Header */}
-      <header className="border-b border-border bg-card">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <h1 className="text-2xl font-bold">{t.title}</h1>
-            <div className="flex items-center gap-2 flex-wrap">
-              <Link href="/questions">
-                <Button variant="outline" size="sm">
-                  <MessageCircleQuestion className="h-4 w-4 mr-2" />
-                  <span className="hidden sm:inline">
-                    {lang === "sl" ? "Vprašanja" : "Questions"}
-                  </span>
-                </Button>
-              </Link>
-              <Link href="/learning">
-                <Button variant="outline" size="sm">
-                  <Users className="h-4 w-4 mr-2" />
-                  <span className="hidden sm:inline">
-                    {lang === "sl" ? "Učenje" : "Learning"}
-                  </span>
-                </Button>
-              </Link>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setLang(lang === "sl" ? "en" : "sl")}>
-                <Globe className="h-5 w-5" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setDarkMode(!darkMode)}>
-                {darkMode ? (
-                  <Sun className="h-5 w-5" />
-                ) : (
-                  <Moon className="h-5 w-5" />
-                )}
-              </Button>
-            </div>
-          </div>
-        </div>
-      </header>
+    <div className="min-h-screen bg-background text-foreground pb-10">
+      <HeroSubscription
+        t={t}
+        onSubscribeClick={() => setSubscribeOpen(true)}
+      />
 
-      <main className="container mx-auto px-4 py-8">
-        {/* Stats and View Switcher */}
-        <div className="mb-6 flex items-center justify-between">
-          <p className="text-sm text-muted-foreground">
+      <main className="container mx-auto px-4 py-8 -mt-8 relative z-10">
+        {/* Controls */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+          <p className="text-muted-foreground">
             {filteredSlots.length} {t.slotsFound}
           </p>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center justify-between sm:justify-end gap-4 w-full sm:w-auto">
             <ToggleGroup
               type="single"
               value={viewMode}
@@ -521,8 +514,8 @@ export default function App() {
               </ToggleGroupItem>
             </ToggleGroup>
             {lastScraped && (
-              <p className="text-sm text-muted-foreground">
-                {t.lastUpdated}:{" "}
+              <p className="text-xs text-muted-foreground text-right">
+                {t.lastUpdated}:<br/>
                 {new Date(lastScraped).toLocaleString(
                   lang === "sl" ? "sl-SI" : "en-US"
                 )}
@@ -532,45 +525,11 @@ export default function App() {
         </div>
 
         {/* Filters */}
-        <Card className="mb-6">
+        <Card className="mb-6 border-none shadow-md bg-card/50 backdrop-blur-sm">
           <CardContent className="pt-6">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
               <h2 className="text-lg font-semibold">{t.filterTitle}</h2>
               <div className="flex items-center gap-2 flex-wrap">
-                <Dialog open={subscribeOpen} onOpenChange={setSubscribeOpen}>
-                  <DialogTrigger asChild>
-                    <Button variant="outline" size="sm">
-                      <Mail className="h-4 w-4 mr-2" />
-                      <span className="hidden sm:inline">{t.subscribe}</span>
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>{t.subscribe}</DialogTitle>
-                      <DialogDescription>{t.subscribeDesc}</DialogDescription>
-                    </DialogHeader>
-                    {subscribeSuccess ? (
-                      <div className="text-center py-4 text-green-600">
-                        {t.subscribeSuccess}
-                      </div>
-                    ) : (
-                      <div className="space-y-4 mt-4">
-                        <div>
-                          <Label>{t.email}</Label>
-                          <Input
-                            type="email"
-                            value={subscribeEmail}
-                            onChange={(e) => setSubscribeEmail(e.target.value)}
-                            placeholder="vas@email.si"
-                          />
-                        </div>
-                        <Button onClick={handleSubscribe} className="w-full">
-                          {t.subscribeBtn}
-                        </Button>
-                      </div>
-                    )}
-                  </DialogContent>
-                </Dialog>
                 <Button variant="ghost" size="sm" onClick={clearFilters}>
                   {t.clearFilters}
                 </Button>
@@ -578,7 +537,6 @@ export default function App() {
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-              {/* Exam Type Toggle */}
               {/* Exam Type Toggle */}
               <div>
                 <Label>{t.examType}</Label>
@@ -699,7 +657,8 @@ export default function App() {
 
         {/* Slots Display */}
         {loading ? (
-          <div className="text-center py-12 text-muted-foreground">
+          <div className="text-center py-12 text-muted-foreground flex flex-col items-center">
+            <Loader2 className="h-8 w-8 animate-spin mb-4 text-primary" />
             {t.loading}
           </div>
         ) : filteredSlots.length === 0 ? (
@@ -707,18 +666,186 @@ export default function App() {
             {t.noSlots}
           </div>
         ) : (
-          <div
-            className={
-              viewMode === "grid"
-                ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
-                : viewMode === "compact"
-                  ? "border border-border rounded-lg overflow-hidden"
-                  : "space-y-3"
-            }>
-            {filteredSlots.map((slot, index) => renderSlot(slot, index))}
-          </div>
+          <>
+            <div
+              className={
+                viewMode === "grid"
+                  ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
+                  : viewMode === "compact"
+                    ? "rounded-lg overflow-hidden"
+                    : "space-y-3"
+              }>
+              {visibleSlots.map((slot, index) => renderSlot(slot, index))}
+            </div>
+            
+            {/* Infinite Scroll Sentinel */}
+            {visibleCount < filteredSlots.length && (
+              <div ref={observerTarget} className="py-8 flex justify-center">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              </div>
+            )}
+          </>
         )}
       </main>
+
+      {/* Subscription Dialog */}
+      <Dialog open={subscribeOpen} onOpenChange={setSubscribeOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>{t.subscribe}</DialogTitle>
+            <DialogDescription>{t.subscribeDesc}</DialogDescription>
+          </DialogHeader>
+          {subscribeSuccess ? (
+            <div className="text-center py-8 text-green-600 font-medium">
+              {t.subscribeSuccess}
+            </div>
+          ) : (
+            <div className="space-y-4 mt-4">
+              <div className="space-y-2">
+                <Label>{t.email} <span className="text-red-500">*</span></Label>
+                <Input
+                  type="email"
+                  value={subscribeEmail}
+                  onChange={(e) => setSubscribeEmail(e.target.value)}
+                  placeholder="vas@email.si"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>{t.examType} <span className="text-red-500">*</span></Label>
+                <ToggleGroup
+                  type="single"
+                  value={subExamType}
+                  onValueChange={(v) => {
+                    if (!v) return;
+                    setSubExamType(v);
+                    if (v === "voznja") setSubTolmac(false);
+                  }}
+                  className="justify-start">
+                  <ToggleGroupItem value="voznja" className="flex-1">
+                    {t.examTypeDriving}
+                  </ToggleGroupItem>
+                  <ToggleGroupItem value="teorija" className="flex-1">
+                    {t.examTypeTheory}
+                  </ToggleGroupItem>
+                </ToggleGroup>
+              </div>
+
+              <div className="space-y-2">
+                <Label>{t.region}</Label>
+                <Select
+                  value={subRegion || "all"}
+                  onValueChange={(v) => {
+                    setSubRegion(v === "all" ? "" : v);
+                    setSubTown(""); // Reset town when region changes
+                  }}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">{t.regionAll}</SelectItem>
+                    <SelectItem value="1">
+                      {lang === "sl" ? "Primorska/Goriška" : "Coastal/Western"}
+                    </SelectItem>
+                    <SelectItem value="2">
+                      {lang === "sl"
+                        ? "Osrednjeslovenska/Gorenjska"
+                        : "Central/UpperCarniola"}
+                    </SelectItem>
+                    <SelectItem value="3">
+                      {lang === "sl" ? "Celjska/Koroška" : "Celje/Carinthia"}
+                    </SelectItem>
+                    <SelectItem value="4">
+                      {lang === "sl"
+                        ? "Dolenjska/BelaKrajina"
+                        : "LowerCarniola/WhiteCarniola"}
+                    </SelectItem>
+                    <SelectItem value="5">
+                      {lang === "sl"
+                        ? "Štajerska/Prekmurje"
+                        : "Styria/Prekmurje"}
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>{t.town}</Label>
+                <Select
+                  value={subTown || "all"}
+                  onValueChange={(v) => setSubTown(v === "all" ? "" : v)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">{t.townAll}</SelectItem>
+                    {subAvailableTowns.map((town) => (
+                      <SelectItem key={town} value={town}>
+                        {town}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>{t.categories} <span className="text-red-500">*</span></Label>
+                <Select
+                  value={subCategory || "all"}
+                  onValueChange={(v) => setSubCategory(v === "all" ? "" : v)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">{t.categoryAll}</SelectItem>
+                    {CATEGORY_GROUPS.map((group, groupIndex) => (
+                      <div key={groupIndex} className="flex gap-1 px-2 py-1">
+                        {group.map((cat) => (
+                          <SelectItem key={cat} value={cat} className="flex-1">
+                            {cat}
+                          </SelectItem>
+                        ))}
+                      </div>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {subExamType === "teorija" && (
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    id="sub-tolmac"
+                    checked={subTolmac}
+                    onCheckedChange={setSubTolmac}
+                  />
+                  <Label htmlFor="sub-tolmac">{t.withTranslator}</Label>
+                </div>
+              )}
+
+              {subError && (
+                <div className="text-sm text-red-500 font-medium">
+                  {subError}
+                </div>
+              )}
+
+              <Button 
+                className="w-full mt-4" 
+                onClick={handleSubscribe}
+                disabled={subscribing}
+              >
+                {subscribing ? (
+                  <>
+                    <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                    {t.loading}
+                  </>
+                ) : (
+                  t.subscribeBtn
+                )}
+              </Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

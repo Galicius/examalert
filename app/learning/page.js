@@ -1,114 +1,104 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { Moon, Sun, Globe, Calendar as CalendarIcon, Users, LogIn, LogOut, Home } from 'lucide-react';
-import Link from 'next/link';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Calendar } from '@/components/ui/calendar';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
-import { useAuth } from '@/lib/auth';
-import { AuthDialog } from '@/components/auth-dialog';
-import { format } from 'date-fns';
+import { useState, useEffect } from "react";
+import { Calendar as CalendarIcon, Users, LogIn } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Calendar } from "@/components/ui/calendar";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { useSettings } from "@/lib/settings";
+import { useAuth } from "@/lib/auth";
+import { AuthDialog } from "@/components/auth-dialog";
+import { format } from "date-fns";
 
 const translations = {
   sl: {
-    title: 'Skupno učenje',
-    subtitle: 'Pridruži se drugim in se učite skupaj za izpit',
-    selectDate: 'Izberi datum',
-    availableSpots: 'Prosta mesta',
-    participants: 'Udeleženci',
-    join: 'Pridruži se',
-    leave: 'Zapusti',
-    addNote: 'Dodaj opombo',
-    updateNote: 'Posodobi opombo',
-    yourNote: 'Tvoja opomba (opcijsko)',
-    sessionFull: 'Polno',
-    loginRequired: 'Prijava potrebna',
-    backToHome: 'Nazaj na domačo stran',
-    login: 'Prijava',
-    register: 'Registracija',
-    logout: 'Odjava',
-    authTitle: 'Prijava / Registracija',
-    authDescription: 'Prijavite se ali se registrirajte za dostop do vseh funkcij',
-    email: 'E-pošta',
-    username: 'Uporabniško ime',
-    password: 'Geslo',
+    title: "Skupinsko učenje",
+    subtitle: "Pridružite se učnim uram in se pripravite na izpit skupaj",
+    calendar: "Koledar",
+    sessions: "Učne ure",
+    join: "Pridruži se",
+    leave: "Zapusti",
+    participants: "Udeleženci",
+    sessionFull: "Polno",
+    availableSpots: "prostih mest",
+    loginRequired: "Prijava potrebna",
+    yourNote: "Tvoja opomba (npr. kaj se učiš)",
+    addNote: "Dodaj opombo",
+    updateNote: "Posodobi",
+    loading: "Nalaganje...",
+    noSessions: "Za ta dan ni razpisanih učnih ur.",
+    createSession: "Predlagaj termin",
+    authTitle: "Prijava / Registracija",
+    authDescription: "Prijavite se za sodelovanje pri učenju",
+    email: "E-pošta",
+    username: "Uporabniško ime",
+    password: "Geslo",
+    login: "Prijava",
+    register: "Registracija",
   },
   en: {
-    title: 'Group Learning',
-    subtitle: 'Join others and study together for the exam',
-    selectDate: 'Select date',
-    availableSpots: 'Available spots',
-    participants: 'Participants',
-    join: 'Join',
-    leave: 'Leave',
-    addNote: 'Add note',
-    updateNote: 'Update note',
-    yourNote: 'Your note (optional)',
-    sessionFull: 'Full',
-    loginRequired: 'Login required',
-    backToHome: 'Back to home',
-    login: 'Login',
-    register: 'Register',
-    logout: 'Logout',
-    authTitle: 'Login / Register',
-    authDescription: 'Login or register to access all features',
-    email: 'Email',
-    username: 'Username',
-    password: 'Password',
-  }
+    title: "Group Learning",
+    subtitle: "Join study sessions and prepare for exams together",
+    calendar: "Calendar",
+    sessions: "Study Sessions",
+    join: "Join",
+    leave: "Leave",
+    participants: "Participants",
+    sessionFull: "Full",
+    availableSpots: "spots left",
+    loginRequired: "Login required",
+    yourNote: "Your note (e.g. what you're studying)",
+    addNote: "Add note",
+    updateNote: "Update",
+    loading: "Loading...",
+    noSessions: "No sessions scheduled for this day.",
+    createSession: "Suggest a time",
+    authTitle: "Login / Register",
+    authDescription: "Login to join study sessions",
+    email: "Email",
+    username: "Username",
+    password: "Password",
+    login: "Login",
+    register: "Register",
+  },
 };
 
 export default function LearningPage() {
-  const [darkMode, setDarkMode] = useState(false);
-  const [lang, setLang] = useState('sl');
-  const [selectedDate, setSelectedDate] = useState(new Date());
-  const [sessions, setSessions] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [authDialogOpen, setAuthDialogOpen] = useState(false);
-  const [editingNote, setEditingNote] = useState(null);
-  const [noteText, setNoteText] = useState('');
-
-  const { user, isAuthenticated, logout, getAuthHeaders } = useAuth();
+  const { lang } = useSettings();
+  const { user, isAuthenticated, getAuthHeaders } = useAuth();
   const t = translations[lang];
 
-  // Load theme from localStorage
-  useEffect(() => {
-    const savedTheme = localStorage.getItem('theme');
-    if (savedTheme === 'dark') {
-      setDarkMode(true);
-      document.documentElement.classList.add('dark');
-    }
-  }, []);
-
-  // Save theme to localStorage
-  useEffect(() => {
-    if (darkMode) {
-      document.documentElement.classList.add('dark');
-      localStorage.setItem('theme', 'dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-      localStorage.setItem('theme', 'light');
-    }
-  }, [darkMode]);
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [sessions, setSessions] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [authDialogOpen, setAuthDialogOpen] = useState(false);
+  const [editingNote, setEditingNote] = useState(null);
+  const [noteText, setNoteText] = useState("");
 
   useEffect(() => {
-    fetchSessions();
+    if (selectedDate) {
+      fetchSessions(selectedDate);
+    }
   }, [selectedDate]);
 
-  const fetchSessions = async () => {
+  const fetchSessions = async (date) => {
+    setLoading(true);
     try {
-      setLoading(true);
-      const dateStr = format(selectedDate, 'yyyy-MM-dd');
-      const res = await fetch(`/api/learning/sessions?date=${dateStr}`);
-      const data = await res.json();
-      setSessions(data.sessions || []);
+      const formattedDate = format(date, 'yyyy-MM-dd');
+      const res = await fetch(`/api/learning/sessions?date=${formattedDate}`);
+      
+      if (res.ok) {
+        const data = await res.json();
+        setSessions(data.sessions || []);
+      } else {
+        console.error("Failed to fetch sessions");
+        setSessions([]);
+      }
     } catch (error) {
-      console.error('Error fetching sessions:', error);
+      console.error("Error fetching sessions:", error);
+      setSessions([]);
     } finally {
       setLoading(false);
     }
@@ -119,136 +109,96 @@ export default function LearningPage() {
       setAuthDialogOpen(true);
       return;
     }
-
+    
     try {
-      const res = await fetch('/api/learning/sessions/join', {
-        method: 'POST',
+      const res = await fetch("/api/learning/sessions/join", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
-          ...getAuthHeaders()
+          "Content-Type": "application/json",
+          ...getAuthHeaders(),
         },
-        body: JSON.stringify({ session_id: sessionId, note: '' })
+        body: JSON.stringify({ session_id: sessionId, note: noteText }),
       });
 
       if (res.ok) {
-        fetchSessions();
+        fetchSessions(selectedDate);
+        setNoteText("");
       } else {
         const data = await res.json();
-        alert(data.error || 'Failed to join session');
+        alert(data.error || "Failed to join session");
       }
     } catch (error) {
-      console.error('Error joining session:', error);
-      alert('Failed to join session');
+      console.error("Error joining session:", error);
     }
   };
 
   const handleLeaveSession = async (sessionId) => {
     try {
-      const res = await fetch('/api/learning/sessions/leave', {
-        method: 'POST',
+      const res = await fetch("/api/learning/sessions/leave", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
-          ...getAuthHeaders()
+          "Content-Type": "application/json",
+          ...getAuthHeaders(),
         },
-        body: JSON.stringify({ session_id: sessionId })
+        body: JSON.stringify({ session_id: sessionId }),
       });
 
       if (res.ok) {
-        fetchSessions();
+        fetchSessions(selectedDate);
       } else {
         const data = await res.json();
-        alert(data.error || 'Failed to leave session');
+        alert(data.error || "Failed to leave session");
       }
     } catch (error) {
-      console.error('Error leaving session:', error);
-      alert('Failed to leave session');
+      console.error("Error leaving session:", error);
     }
   };
 
   const handleUpdateNote = async (sessionId) => {
     try {
-      const res = await fetch('/api/learning/sessions/note', {
-        method: 'POST',
+      const res = await fetch("/api/learning/sessions/note", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
-          ...getAuthHeaders()
+          "Content-Type": "application/json",
+          ...getAuthHeaders(),
         },
-        body: JSON.stringify({ session_id: sessionId, note: noteText })
+        body: JSON.stringify({ session_id: sessionId, note: noteText }),
       });
 
       if (res.ok) {
         setEditingNote(null);
-        setNoteText('');
-        fetchSessions();
+        fetchSessions(selectedDate);
       } else {
         const data = await res.json();
-        alert(data.error || 'Failed to update note');
+        alert(data.error || "Failed to update note");
       }
     } catch (error) {
-      console.error('Error updating note:', error);
-      alert('Failed to update note');
+      console.error("Error updating note:", error);
     }
   };
 
   const isUserInSession = (session) => {
-    return session.participants?.some(p => p.username === user?.username);
+    if (!user) return false;
+    return session.participants.some(p => p.username === user.username);
   };
 
   const getUserNote = (session) => {
-    const participant = session.participants?.find(p => p.username === user?.username);
-    return participant?.note || '';
+    if (!user) return "";
+    const participant = session.participants.find(p => p.username === user.username);
+    return participant ? participant.note : "";
   };
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      {/* Header */}
-      <header className="border-b border-border bg-card">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div>
-              <h1 className="text-2xl font-bold">{t.title}</h1>
-              <p className="text-sm text-muted-foreground">{t.subtitle}</p>
-            </div>
-            <div className="flex items-center gap-2 flex-wrap">
-              <Link href="/">
-                <Button variant="outline" size="sm">
-                  <Home className="h-4 w-4 mr-2" />
-                  {t.backToHome}
-                </Button>
-              </Link>
-              {isAuthenticated ? (
-                <>
-                  <Badge variant="secondary" className="px-3 py-1.5">
-                    {user?.username}
-                  </Badge>
-                  <Button variant="ghost" size="sm" onClick={logout}>
-                    <LogOut className="h-4 w-4 mr-2" />
-                    {t.logout}
-                  </Button>
-                </>
-              ) : (
-                <Button variant="default" size="sm" onClick={() => setAuthDialogOpen(true)}>
-                  <LogIn className="h-4 w-4 mr-2" />
-                  {t.login}
-                </Button>
-              )}
-              <Button variant="ghost" size="icon" onClick={() => setLang(lang === 'sl' ? 'en' : 'sl')}>
-                <Globe className="h-5 w-5" />
-              </Button>
-              <Button variant="ghost" size="icon" onClick={() => setDarkMode(!darkMode)}>
-                {darkMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
-              </Button>
-            </div>
-          </div>
-        </div>
-      </header>
-
       <main className="container mx-auto px-4 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Calendar */}
-          <Card className="lg:col-span-1">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Calendar Sidebar */}
+          <Card className="lg:col-span-1 h-fit">
             <CardHeader>
-              <CardTitle className="text-lg">{t.selectDate}</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <CalendarIcon className="h-5 w-5" />
+                {t.calendar}
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <Calendar
@@ -256,7 +206,9 @@ export default function LearningPage() {
                 selected={selectedDate}
                 onSelect={(date) => date && setSelectedDate(date)}
                 className="rounded-md border"
-                disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
+                disabled={(date) =>
+                  date < new Date(new Date().setHours(0, 0, 0, 0))
+                }
               />
             </CardContent>
           </Card>
@@ -264,11 +216,13 @@ export default function LearningPage() {
           {/* Sessions */}
           <div className="lg:col-span-2 space-y-4">
             <h2 className="text-xl font-semibold">
-              {format(selectedDate, 'EEEE, dd MMMM yyyy')}
+              {format(selectedDate, "EEEE, dd MMMM yyyy")}
             </h2>
 
             {loading ? (
-              <div className="text-center py-12 text-muted-foreground">Loading...</div>
+              <div className="text-center py-12 text-muted-foreground">
+                {t.loading}
+              </div>
             ) : (
               <div className="space-y-4">
                 {sessions.map((session) => {
@@ -280,21 +234,36 @@ export default function LearningPage() {
                       <CardHeader>
                         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                           <div className="flex items-center gap-3">
-                            <div className="text-3xl font-bold text-primary">{session.time}</div>
+                            <div className="text-3xl font-bold text-primary">
+                              {session.time}
+                            </div>
                             <div>
-                              <Badge variant={session.isFull ? 'secondary' : 'default'}>
-                                {session.isFull ? t.sessionFull : `${session.availableSpots} ${t.availableSpots}`}
+                              <Badge
+                                variant={
+                                  session.isFull ? "secondary" : "default"
+                                }
+                              >
+                                {session.isFull
+                                  ? t.sessionFull
+                                  : `${session.availableSpots} ${t.availableSpots}`}
                               </Badge>
                             </div>
                           </div>
                           <div>
                             {!isAuthenticated ? (
-                              <Button size="sm" onClick={() => setAuthDialogOpen(true)}>
+                              <Button
+                                size="sm"
+                                onClick={() => setAuthDialogOpen(true)}
+                              >
                                 <LogIn className="h-4 w-4 mr-2" />
                                 {t.loginRequired}
                               </Button>
                             ) : userInSession ? (
-                              <Button size="sm" variant="outline" onClick={() => handleLeaveSession(session.id)}>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleLeaveSession(session.id)}
+                              >
                                 {t.leave}
                               </Button>
                             ) : session.isFull ? (
@@ -302,7 +271,10 @@ export default function LearningPage() {
                                 {t.sessionFull}
                               </Button>
                             ) : (
-                              <Button size="sm" onClick={() => handleJoinSession(session.id)}>
+                              <Button
+                                size="sm"
+                                onClick={() => handleJoinSession(session.id)}
+                              >
                                 {t.join}
                               </Button>
                             )}
@@ -318,14 +290,18 @@ export default function LearningPage() {
                             </h4>
                             <div className="space-y-2">
                               {session.participants.map((participant) => (
-                                <div 
-                                  key={participant.id} 
+                                <div
+                                  key={participant.id}
                                   className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-2 rounded bg-accent/50"
                                 >
                                   <div className="flex-1">
-                                    <span className="font-medium">{participant.username}</span>
+                                    <span className="font-medium">
+                                      {participant.username}
+                                    </span>
                                     {participant.note && (
-                                      <p className="text-sm text-muted-foreground mt-1">{participant.note}</p>
+                                      <p className="text-sm text-muted-foreground mt-1">
+                                        {participant.note}
+                                      </p>
                                     )}
                                   </div>
                                   {participant.username === user?.username && (
@@ -335,14 +311,25 @@ export default function LearningPage() {
                                           <Input
                                             type="text"
                                             value={noteText}
-                                            onChange={(e) => setNoteText(e.target.value)}
+                                            onChange={(e) =>
+                                              setNoteText(e.target.value)
+                                            }
                                             placeholder={t.yourNote}
                                             className="flex-1 sm:w-48"
                                           />
-                                          <Button size="sm" onClick={() => handleUpdateNote(session.id)}>
+                                          <Button
+                                            size="sm"
+                                            onClick={() =>
+                                              handleUpdateNote(session.id)
+                                            }
+                                          >
                                             {t.updateNote}
                                           </Button>
-                                          <Button size="sm" variant="ghost" onClick={() => setEditingNote(null)}>
+                                          <Button
+                                            size="sm"
+                                            variant="ghost"
+                                            onClick={() => setEditingNote(null)}
+                                          >
                                             ✕
                                           </Button>
                                         </div>
@@ -379,9 +366,9 @@ export default function LearningPage() {
         </div>
       </main>
 
-      <AuthDialog 
-        open={authDialogOpen} 
-        onOpenChange={setAuthDialogOpen} 
+      <AuthDialog
+        open={authDialogOpen}
+        onOpenChange={setAuthDialogOpen}
         translations={t}
       />
     </div>
