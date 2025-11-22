@@ -1,5 +1,7 @@
 'use client';
 
+// Google Login Component
+
 import { useState } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -8,9 +10,10 @@ import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/lib/auth';
 import { Loader2 } from 'lucide-react';
+import { GoogleLogin } from '@react-oauth/google';
 
 export function AuthDialog({ open, onOpenChange, translations }) {
-  const { login, register } = useAuth();
+  const { login, register, loginWithGoogle } = useAuth();
   const [activeTab, setActiveTab] = useState('login');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -61,6 +64,25 @@ export function AuthDialog({ open, onOpenChange, translations }) {
     setLoading(false);
   };
 
+  const handleGoogleLogin = async (credentialResponse) => {
+    setLoading(true);
+    setError('');
+    
+    if (credentialResponse.credential) {
+      const result = await loginWithGoogle(credentialResponse.credential);
+      
+      if (result.success) {
+        onOpenChange(false);
+      } else {
+        setError(result.error || 'Google login failed');
+      }
+    } else {
+      setError('Google login failed');
+    }
+    
+    setLoading(false);
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
@@ -69,13 +91,32 @@ export function AuthDialog({ open, onOpenChange, translations }) {
           <DialogDescription>{translations.authDescription}</DialogDescription>
         </DialogHeader>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <Tabs defaultValue="login" className="w-full" value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="login">{translations.login}</TabsTrigger>
             <TabsTrigger value="register">{translations.register}</TabsTrigger>
           </TabsList>
 
           <TabsContent value="login">
+            <div className="flex justify-center mb-4">
+              <GoogleLogin
+                onSuccess={handleGoogleLogin}
+                onError={() => setError('Google login failed')}
+                theme="filled_blue"
+                shape="pill"
+                width="100%"
+              />
+            </div>
+
+            <div className="relative mb-4">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-background px-2 text-muted-foreground">Or continue with email</span>
+              </div>
+            </div>
+
             <form onSubmit={handleLogin} className="space-y-4">
               <div>
                 <Label htmlFor="login-email">{translations.email}</Label>
@@ -107,6 +148,25 @@ export function AuthDialog({ open, onOpenChange, translations }) {
           </TabsContent>
 
           <TabsContent value="register">
+            <div className="flex justify-center mb-4">
+              <GoogleLogin
+                onSuccess={handleGoogleLogin}
+                onError={() => setError('Google login failed')}
+                theme="filled_blue"
+                shape="pill"
+                width="100%"
+              />
+            </div>
+
+            <div className="relative mb-4">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-background px-2 text-muted-foreground">Or continue with email</span>
+              </div>
+            </div>
+
             <form onSubmit={handleRegister} className="space-y-4">
               <div>
                 <Label htmlFor="reg-email">{translations.email}</Label>

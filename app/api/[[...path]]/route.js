@@ -4,6 +4,9 @@ import { Resend } from "resend";
 import crypto from "crypto";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import { OAuth2Client } from 'google-auth-library';
+
+const googleClient = new OAuth2Client(process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID);
 
 export const runtime = 'nodejs';         // force Node, not Edge
 export const dynamic = 'force-dynamic';  // avoid caching of API responses
@@ -206,39 +209,64 @@ export async function GET(request) {
 
       // Define the three time slots
       const timeSlots = ['16:00:00', '18:00:00', '20:00:00'];
-      const sessions = [];
+      
+      // Ensure all sessions exist in a single query (more efficient than 3 separate INSERTs)
+      const sessionValues = timeSlots.map((_, idx) => `($1, $${idx + 2})`).join(', ');
+      await query(
+        `INSERT INTO learning_sessions (session_date, session_time)
+         VALUES ${sessionValues}
+         ON CONFLICT (session_date, session_time) DO NOTHING`,
+        [date, ...timeSlots]
+      );
 
-      for (const timeSlot of timeSlots) {
-        // Ensure session exists
-        const sessionResult = await query(
-          `INSERT INTO learning_sessions (session_date, session_time)
-           VALUES ($1, $2)
-           ON CONFLICT (session_date, session_time) DO UPDATE SET session_date = $1
-           RETURNING id`,
-          [date, timeSlot]
-        );
+      // Fetch all sessions with participants in a single query
+      const sessionsResult = await query(
+        `SELECT 
+          ls.id,
+          ls.session_time,
+          sp.id as participant_id,
+          sp.note,
+          sp.joined_at,
+          u.username,
+          u.email
+         FROM learning_sessions ls
+         LEFT JOIN session_participants sp ON ls.id = sp.session_id
+         LEFT JOIN users u ON sp.user_id = u.id
+         WHERE ls.session_date = $1 AND ls.session_time = ANY($2)
+         ORDER BY ls.session_time, sp.joined_at ASC`,
+        [date, timeSlots]
+      );
+
+      // Group participants by session
+      const sessionsMap = new Map();
+      for (const row of sessionsResult.rows) {
+        if (!sessionsMap.has(row.id)) {
+          sessionsMap.set(row.id, {
+            id: row.id,
+            date,
+            time: row.session_time.substring(0, 5),
+            participants: []
+          });
+        }
         
-        const sessionId = sessionResult.rows[0].id;
-
-        // Get participants
-        const participantsResult = await query(
-          `SELECT sp.id, sp.note, sp.joined_at, u.username, u.email
-           FROM session_participants sp
-           JOIN users u ON sp.user_id = u.id
-           WHERE sp.session_id = $1
-           ORDER BY sp.joined_at ASC`,
-          [sessionId]
-        );
-
-        sessions.push({
-          id: sessionId,
-          date,
-          time: timeSlot.substring(0, 5), // Format as HH:MM
-          participants: participantsResult.rows,
-          availableSpots: Math.max(0, 5 - participantsResult.rows.length),
-          isFull: participantsResult.rows.length >= 5
-        });
+        // Add participant if exists (LEFT JOIN may have NULL)
+        if (row.participant_id) {
+          sessionsMap.get(row.id).participants.push({
+            id: row.participant_id,
+            note: row.note,
+            joined_at: row.joined_at,
+            username: row.username,
+            email: row.email
+          });
+        }
       }
+
+      // Convert map to array and add computed fields
+      const sessions = Array.from(sessionsMap.values()).map(session => ({
+        ...session,
+        availableSpots: Math.max(0, 5 - session.participants.length),
+        isFull: session.participants.length >= 5
+      }));
 
       return NextResponse.json({ sessions });
     } catch (error) {
@@ -317,14 +345,88 @@ export async function POST(request) {
         token, 
         user: { 
           id: user.id, 
-          username: user.username, 
-          email: user.email 
+          username: user.username,
+          email: user.email
         } 
       });
     } catch (error) {
       console.error("Error registering user:", error);
       return NextResponse.json(
-        { error: "Registration failed", message: error.message },
+        { error: "Failed to register user" },
+        { status: 500 }
+      );
+    }
+  }
+
+  // POST /api/auth/google - Google Login
+  if (pathname === "/api/auth/google") {
+    await ensureDB();
+
+    try {
+      const body = await request.json();
+      const { credential } = body;
+
+      const ticket = await googleClient.verifyIdToken({
+        idToken: credential,
+        audience: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID,
+      });
+      const payload = ticket.getPayload();
+      const { email, name } = payload;
+
+      // Check if user exists
+      let result = await query(
+        "SELECT id, email, username, password_hash FROM users WHERE email = $1",
+        [email]
+      );
+
+      let user;
+
+      if (result.rows.length === 0) {
+        // Create new user
+        // Generate a random password for Google users
+        const randomPassword = crypto.randomBytes(16).toString('hex');
+        const passwordHash = await bcrypt.hash(randomPassword, 10);
+        
+        // Use name or part of email as username
+        let username = name || email.split('@')[0];
+        
+        // Ensure username is unique (simple check)
+        const existingUsername = await query("SELECT id FROM users WHERE username = $1", [username]);
+        if (existingUsername.rows.length > 0) {
+          username = `${username}_${crypto.randomBytes(4).toString('hex')}`;
+        }
+
+        const newUser = await query(
+          `INSERT INTO users (email, username, password_hash)
+           VALUES ($1, $2, $3)
+           RETURNING id, email, username, created_at`,
+          [email, username, passwordHash]
+        );
+        user = newUser.rows[0];
+      } else {
+        user = result.rows[0];
+      }
+
+      // Generate JWT token
+      const token = jwt.sign(
+        { id: user.id, username: user.username, email: user.email },
+        process.env.JWT_SECRET || "default-secret-key",
+        { expiresIn: "7d" }
+      );
+
+      return NextResponse.json({ 
+        token, 
+        user: { 
+          id: user.id, 
+          username: user.username, 
+          email: user.email 
+        } 
+      });
+
+    } catch (error) {
+      console.error("Error with Google login:", error);
+      return NextResponse.json(
+        { error: "Google login failed" },
         { status: 500 }
       );
     }

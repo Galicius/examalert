@@ -6,6 +6,9 @@ import {
   List,
   AlignJustify,
   Loader2,
+  ChevronDown,
+  ChevronUp,
+  ArrowUp,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -31,6 +34,8 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Input } from "@/components/ui/input";
 import { useSettings } from "@/lib/settings";
 import { HeroSubscription } from "@/components/HeroSubscription";
+import { useAuth } from "@/lib/auth";
+import { GoogleLogin } from "@react-oauth/google";
 
 const OBMOCJE_MAP = {
   1: [
@@ -95,97 +100,94 @@ const ADDRESS_MAP = {
   Brežice: "Izobraževalno vadbeni center, Bizeljska cesta 45, Brežice",
   Črnomelj: "Ulica Otona Župančiča 4, Črnomelj",
   Kočevje: "Cesta na stadion 7, Kočevje",
-  Krško: "Žadovinek 36, Krško",
-  "Novo mesto": "UE Defranceschijeva 1 (vhod z zadnje strani), Novo mesto",
-  Sevnica: "Prvomajska ulica 8, Sevnica",
+  Krško: "Cesta krških žrtev 131, Krško",
+  "Novo mesto": "Podbevškova ulica 10, Novo mesto",
+  Sevnica: "Savska cesta 20b, Sevnica",
 
   // ===== OBMOČJE 5 =====
-  Maribor: "Cesta k Tamu 11, Maribor",
-  "Murska Sobota": "Noršinska ulica 8, Murska Sobota",
-  Ormož: "Vrazova ulica 12, Ormož",
-  Ptuj: "Dornavska cesta 22B, Ptuj",
-  "Slovenska Bistrica": "Partizanska cesta 22, Slovenska Bistrica",
+  Maribor: "Ptujska cesta 184, Maribor",
+  "Murska Sobota": "Noršinska ulica 10, Murska Sobota",
+  Ormož: "Ljutomerska cesta 30, Ormož",
+  Ptuj: "Ormoška cesta 26, Ptuj",
+  "Slovenska Bistrica": "Žolgarjeva ulica 2, Slovenska Bistrica",
 };
 
 const CATEGORY_GROUPS = [
-  ["A", "A1", "A2", "AM"],
-  ["B", "B1", "BE"],
-  ["C", "C1", "C1E", "CE"],
-  ["D", "D1", "D1E", "DE"],
-  ["F", "G"],
+  ["AM", "A1", "A2", "A"],
+  ["B1", "B", "BE"],
+  ["C1", "C", "C1E", "CE"],
+  ["D1", "D", "D1E", "DE"],
+  ["F"],
 ];
 
 const translations = {
   sl: {
-    title: "Iskanje terminov za vozniški izpit",
-    loading: "Nalaganje...",
-    noSlots: "Ni razpoložljivih terminov",
-    filterTitle: "Filtri",
-    date: "Datum",
-    time: "Čas",
-    location: "Lokacija",
-    categories: "Kategorije",
-    places: "Prosta mesta",
+    title: "Vozniski.si - Prosti termini",
+    filterTitle: "Filtriraj termine",
+    clearFilters: "Počisti filtre",
     examType: "Tip izpita",
     examTypeDriving: "Vožnja",
     examTypeTheory: "Teorija",
-    withTranslator: "S tolmačem",
     region: "Območje",
     regionAll: "Vsa območja",
     town: "Mesto",
     townAll: "Vsa mesta",
-    clearFilters: "Počisti filtre",
+    categories: "Kategorije",
+    categoryAll: "Vse kategorije",
+    withTranslator: "S tolmačem",
+    slotsFound: "najdenih terminov",
+    lastUpdated: "Zadnja posodobitev",
+    loading: "Nalaganje terminov...",
+    noSlots: "Ni prostih terminov",
+    noSlotsDesc: "Za izbrane filtre trenutno ni razpisanih prostih terminov. Poskusite spremeniti iskalne pogoje ali se naročite na obvestila.",
     subscribe: "Naroči se na obvestila",
-    subscribeDesc:
-      "Izpolnite spodnje podatke, da boste obveščeni o novih terminih.",
+    subscribeDesc: "Prejemajte e-poštna obvestila, ko se sprosti nov termin za vaše izbrane pogoje.",
     email: "E-pošta",
     subscribeBtn: "Naroči se",
-    subscribeSuccess: "Uspešno ste se naročili na obvestila!",
-    lastUpdated: "Zadnja posodobitev",
-    slotsFound: "najdenih terminov",
-    viewList: "Seznam",
-    viewGrid: "Mreža",
-    viewCompact: "Kompaktno",
-    categoryAll: "Vse kategorije",
+    subscribeSuccess: "Uspešno ste se naročili! Preverite e-pošto za potrditev.",
+    location: "Lokacija",
+    date: "Datum",
+    time: "Ura",
+    places: "Prosta mesta",
+    unknownLocation: "Neznana lokacija",
     validationError: "Prosimo, izpolnite vsa obvezna polja (E-pošta, Kategorija, Tip izpita ter Območje ali Mesto).",
   },
   en: {
-    title: "Driving Exam Slot Finder",
-    loading: "Loading...",
-    noSlots: "No available slots",
-    filterTitle: "Filters",
-    date: "Date",
-    time: "Time",
-    location: "Location",
-    categories: "Categories",
-    places: "Available places",
-    examType: "Exam type",
+    title: "Vozniski.si - Available Slots",
+    filterTitle: "Filter Slots",
+    clearFilters: "Clear Filters",
+    examType: "Exam Type",
     examTypeDriving: "Driving",
     examTypeTheory: "Theory",
-    withTranslator: "With translator",
     region: "Region",
-    regionAll: "All regions",
+    regionAll: "All Regions",
     town: "Town",
-    townAll: "All towns",
-    clearFilters: "Clear filters",
-    subscribe: "Subscribe to notifications",
-    subscribeDesc:
-      "Fill out the details below to get notified about new slots.",
+    townAll: "All Towns",
+    categories: "Categories",
+    categoryAll: "All Categories",
+    withTranslator: "With Translator",
+    slotsFound: "slots found",
+    lastUpdated: "Last updated",
+    loading: "Loading slots...",
+    noSlots: "No available slots",
+    noSlotsDesc: "There are currently no available slots for the selected filters. Try changing your search criteria or subscribe to notifications.",
+    subscribe: "Subscribe to Notifications",
+    subscribeDesc: "Get email notifications when a new slot becomes available for your selected criteria.",
     email: "Email",
     subscribeBtn: "Subscribe",
-    subscribeSuccess: "Successfully subscribed to notifications!",
-    lastUpdated: "Last updated",
-    slotsFound: "slots found",
-    viewList: "List",
-    viewGrid: "Grid",
-    viewCompact: "Compact",
-    categoryAll: "All categories",
+    subscribeSuccess: "Successfully subscribed! Check your email for confirmation.",
+    location: "Location",
+    date: "Date",
+    time: "Time",
+    places: "Free Places",
+    unknownLocation: "Unknown Location",
     validationError: "Please fill in all required fields (Email, Category, Exam Type, and Region or Town).",
   },
 };
 
 export default function App() {
   const { lang } = useSettings();
+  const { loginWithGoogle } = useAuth();
   const [slots, setSlots] = useState([]);
   const [loading, setLoading] = useState(true);
   const [lastScraped, setLastScraped] = useState(null);
@@ -211,6 +213,23 @@ export default function App() {
   const [subError, setSubError] = useState("");
   const [subscribing, setSubscribing] = useState(false);
   const [subTolmac, setSubTolmac] = useState(false);
+
+  // UI State
+  const [showFilters, setShowFilters] = useState(false);
+  const [showScrollTop, setShowScrollTop] = useState(false);
+
+  // Scroll to top listener
+  useEffect(() => {
+    const handleScroll = () => {
+      setShowScrollTop(window.scrollY > 300);
+    };
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
 
   const t = translations[lang];
 
@@ -326,6 +345,30 @@ export default function App() {
     }
   };
 
+  const handleGoogleSubscription = async (credentialResponse) => {
+    if (credentialResponse.credential) {
+      const result = await loginWithGoogle(credentialResponse.credential);
+      
+      if (result.success) {
+        try {
+          // Simple JWT decode
+          const base64Url = credentialResponse.credential.split('.')[1];
+          const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+          const jsonPayload = decodeURIComponent(window.atob(base64).split('').map(function(c) {
+              return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+          }).join(''));
+          const payload = JSON.parse(jsonPayload);
+          
+          if (payload.email) {
+            setSubscribeEmail(payload.email);
+          }
+        } catch (e) {
+          console.error("Failed to decode Google token", e);
+        }
+      }
+    }
+  };
+
   const clearFilters = () => {
     setFilterExamType("voznja");
     setFilterTolmac(false);
@@ -355,23 +398,30 @@ export default function App() {
       return (
         <div
           key={index}
-          className={`flex items-center justify-between py-3 px-4 border-b border-border hover:bg-accent/50 transition-colors ${gradientClass} rounded-md mb-2`}>
-          <div className="flex items-center gap-4 flex-1 overflow-hidden">
-            <span className="font-semibold min-w-[90px]">{slot.date_str}</span>
-            <span className="text-muted-foreground min-w-[50px]">
-              {slot.time_str}
-            </span>
-            <span className="text-sm text-muted-foreground truncate">
-              {slot.location}
-            </span>
+          className={`flex items-center justify-between py-2 px-3 border-b border-border hover:bg-accent/50 transition-colors ${gradientClass} rounded-md mb-1 gap-3`}>
+          <div className="flex flex-col sm:flex-row sm:items-center gap-0.5 sm:gap-3 min-w-[80px] sm:min-w-[140px]">
+            <span className="font-semibold text-sm">{slot.date_str}</span>
+            <span className="text-muted-foreground text-xs sm:text-sm">{slot.time_str}</span>
           </div>
-          <div className="flex items-center gap-2 ml-2">
-             <span className="text-xs px-2 py-1 rounded bg-primary/10 text-primary whitespace-nowrap">
-              {slot.categories}
-            </span>
-            {slot.places_left && (
-              <span className="text-sm font-medium text-green-600 whitespace-nowrap">
-                {slot.places_left}
+          
+          <div className="flex-1 min-w-0 flex flex-col justify-center">
+            <div className="font-medium text-sm truncate">{slot.town}</div>
+            {ADDRESS_MAP[slot.town] && (
+              <div className="text-[10px] sm:text-xs text-muted-foreground truncate hidden sm:block">
+                {ADDRESS_MAP[slot.town]}
+              </div>
+            )}
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            {slot.exam_type !== "teorija" && (
+              <span className="text-[10px] sm:text-xs font-bold px-1.5 py-0.5 rounded-full bg-primary/10 text-primary whitespace-nowrap">
+                {slot.categories}
+              </span>
+            )}
+            {slot.places_left && slot.exam_type !== "voznja" && (
+              <span className="text-xs sm:text-sm font-medium text-green-600 whitespace-nowrap">
+                {slot.places_left} <span className="hidden sm:inline">{t.places}</span>
               </span>
             )}
           </div>
@@ -403,33 +453,35 @@ export default function App() {
                 </div>
               </div>
               
-              <div className="flex items-center justify-between sm:justify-end gap-4 w-full sm:w-auto mt-2 sm:mt-0">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-primary/10 text-primary">
-                    {slot.categories}
-                  </span>
-                  {slot.exam_type && (
-                    <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-secondary text-secondary-foreground">
-                      {slot.exam_type === "voznja"
-                        ? t.examTypeDriving
-                        : t.examTypeTheory}
-                    </span>
-                  )}
+                <div className="flex items-center justify-between sm:justify-end gap-4 w-full sm:w-auto mt-2 sm:mt-0">
+                  <div className="flex items-center gap-2">
+                    {slot.exam_type !== "teorija" && (
+                      <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-primary/10 text-primary">
+                        {slot.categories}
+                      </span>
+                    )}
+                    {slot.exam_type && (
+                      <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-secondary text-secondary-foreground">
+                        {slot.exam_type === "voznja"
+                          ? t.examTypeDriving
+                          : t.examTypeTheory}
+                      </span>
+                    )}
+                  </div>
+                  
+                  <div className="flex items-center gap-3">
+                    {slot.places_left && slot.exam_type !== "voznja" && (
+                      <span className="text-sm font-bold text-green-600 bg-green-50 dark:bg-green-900/20 px-2 py-1 rounded">
+                        {t.places}: {slot.places_left}
+                      </span>
+                    )}
+                    {slot.tolmac && (
+                      <span className="text-xs px-2 py-1 rounded bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200">
+                        {t.withTranslator}
+                      </span>
+                    )}
+                  </div>
                 </div>
-                
-                <div className="flex items-center gap-3">
-                  {slot.places_left && (
-                    <span className="text-sm font-bold text-green-600 bg-green-50 dark:bg-green-900/20 px-2 py-1 rounded">
-                      {t.places}: {slot.places_left}
-                    </span>
-                  )}
-                  {slot.tolmac && (
-                    <span className="text-xs px-2 py-1 rounded bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200">
-                      {t.withTranslator}
-                    </span>
-                  )}
-                </div>
-              </div>
             </div>
           </CardContent>
         </Card>
@@ -506,9 +558,6 @@ export default function App() {
               <ToggleGroupItem value="list" aria-label="List view">
                 <List className="h-4 w-4" />
               </ToggleGroupItem>
-              <ToggleGroupItem value="grid" aria-label="Grid view">
-                <LayoutGrid className="h-4 w-4" />
-              </ToggleGroupItem>
               <ToggleGroupItem value="compact" aria-label="Compact view">
                 <AlignJustify className="h-4 w-4" />
               </ToggleGroupItem>
@@ -528,15 +577,25 @@ export default function App() {
         <Card className="mb-6 border-none shadow-md bg-card/50 backdrop-blur-sm">
           <CardContent className="pt-6">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
-              <h2 className="text-lg font-semibold">{t.filterTitle}</h2>
-              <div className="flex items-center gap-2 flex-wrap">
+              <div className="flex items-center justify-between w-full sm:w-auto">
+                <h2 className="text-lg font-semibold">{t.filterTitle}</h2>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="sm:hidden" 
+                  onClick={() => setShowFilters(!showFilters)}
+                >
+                  {showFilters ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                </Button>
+              </div>
+              <div className={`flex items-center gap-2 flex-wrap ${showFilters ? 'flex' : 'hidden sm:flex'}`}>
                 <Button variant="ghost" size="sm" onClick={clearFilters}>
                   {t.clearFilters}
                 </Button>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+            <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 ${showFilters ? 'grid' : 'hidden sm:grid'}`}>
               {/* Exam Type Toggle */}
               <div>
                 <Label>{t.examType}</Label>
@@ -547,6 +606,7 @@ export default function App() {
                     if (!v) return;
                     setFilterExamType(v);
                     if (v === "voznja") setFilterTolmac(false);
+                    if (v === "teorija") setFilterCategory("");
                   }}
                   className="justify-start mt-2">
                   <ToggleGroupItem value="voznja" className="flex-1">
@@ -618,10 +678,11 @@ export default function App() {
               <div>
                 <Label>{t.categories}</Label>
                 <Select
-                  value={filterCategory || "all"}
+                  value={filterExamType === "teorija" ? "all" : (filterCategory || "all")}
                   onValueChange={(v) =>
                     setFilterCategory(v === "all" ? "" : v)
-                  }>
+                  }
+                  disabled={filterExamType === "teorija"}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -662,8 +723,18 @@ export default function App() {
             {t.loading}
           </div>
         ) : filteredSlots.length === 0 ? (
-          <div className="text-center py-12 text-muted-foreground">
-            {t.noSlots}
+
+          <div className="text-center py-16 px-4">
+            <div className="bg-muted/30 rounded-full p-6 w-24 h-24 mx-auto mb-4 flex items-center justify-center">
+              <List className="h-10 w-10 text-muted-foreground/50" />
+            </div>
+            <h3 className="text-lg font-semibold mb-2">{t.noSlots}</h3>
+            <p className="text-muted-foreground max-w-sm mx-auto mb-6">
+              {t.noSlotsDesc}
+            </p>
+            <Button onClick={() => setSubscribeOpen(true)}>
+              {t.subscribe}
+            </Button>
           </div>
         ) : (
           <>
@@ -701,6 +772,26 @@ export default function App() {
             </div>
           ) : (
             <div className="space-y-4 mt-4">
+              <div className="flex justify-center mb-4">
+                <GoogleLogin
+                  onSuccess={handleGoogleSubscription}
+                  onError={() => setSubError('Google login failed')}
+                  theme="filled_blue"
+                  shape="pill"
+                  width="100%"
+                  text="continue_with"
+                />
+              </div>
+
+              <div className="relative mb-4">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-background px-2 text-muted-foreground">Or continue with email</span>
+                </div>
+              </div>
+
               <div className="space-y-2">
                 <Label>{t.email} <span className="text-red-500">*</span></Label>
                 <Input
@@ -846,6 +937,17 @@ export default function App() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Scroll to Top Button */}
+      {showScrollTop && (
+        <Button
+          className="fixed bottom-8 right-8 rounded-full shadow-lg z-50 h-12 w-12"
+          size="icon"
+          onClick={scrollToTop}
+        >
+          <ArrowUp className="h-6 w-6" />
+        </Button>
+      )}
     </div>
   );
 }

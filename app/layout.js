@@ -2,6 +2,7 @@
 
 import "./globals.css";
 import { AuthProvider } from "@/lib/auth";
+import { GoogleOAuthProvider } from "@react-oauth/google";
 import { SettingsProvider } from "@/lib/settings";
 import { Footer } from "@/components/Footer";
 import { Header } from "@/components/Header";
@@ -18,15 +19,17 @@ export default function RootLayout({ children }) {
       </head>
       <body>
         <SettingsProvider>
-          <AuthProvider>
-            <div className="flex flex-col min-h-screen">
-              <Header />
-              <div className="flex-1 flex flex-col">
-                {children}
+          <GoogleOAuthProvider clientId={process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "mock-client-id"}>
+            <AuthProvider>
+              <div className="flex flex-col min-h-screen">
+                <Header />
+                <div className="flex-1 flex flex-col">
+                  {children}
+                </div>
+                <Footer />
               </div>
-              <Footer />
-            </div>
-          </AuthProvider>
+            </AuthProvider>
+          </GoogleOAuthProvider>
         </SettingsProvider>
       </body>
     </html>
