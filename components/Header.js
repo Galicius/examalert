@@ -51,7 +51,8 @@ export function Header() {
     <header className="border-b border-border bg-card sticky top-0 z-50">
       <div className="container mx-auto px-4 py-4">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <Link href="/" className="hover:opacity-80 transition-opacity">
+          <Link href="/" className="hover:opacity-80 transition-opacity flex items-center gap-3">
+            <img src="/logo.png" alt={t.title} className="h-10 w-auto" />
             <h1 className="text-2xl font-bold">{t.title}</h1>
           </Link>
           

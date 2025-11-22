@@ -10,6 +10,10 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <head>
+        <title>Vozniski.si - Termini za Vozniški Izpit</title>
+        <link rel="icon" href="/logo.png" type="image/png" />
+        <link rel="shortcut icon" href="/logo.png" type="image/png" />
+        <link rel="apple-touch-icon" href="/logo.png" />
         <script src="https://t.contentsquare.net/uxa/5ce2d4ab93a5d.js"></script>
       </head>
       <body>
@@ -28,4 +32,3 @@ export default function RootLayout({ children }) {
     </html>
   );
 }
-
