@@ -2,7 +2,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Moon, Sun, Globe, MessageCircleQuestion, Users, Calendar, LogIn, LogOut } from "lucide-react";
+import { Moon, Sun, Globe, MessageCircleQuestion, Users, Calendar, LogIn, LogOut, User } from "lucide-react";
 import { useSettings } from "@/lib/settings";
 import { useAuth } from "@/lib/auth";
 import { AuthDialog } from "@/components/auth-dialog";
@@ -21,6 +21,11 @@ const translations = {
     password: "Geslo",
     username: "Uporabniško ime",
     register: "Registracija",
+    profile: "Profil",
+    orContinueEmail: "Ali nadaljujte z e-pošto",
+    googleLoginFailed: "Prijava z Google ni uspela",
+    loginFailed: "Prijava ni uspela",
+    registrationFailed: "Registracija ni uspela",
   },
   en: {
     title: "Vozniski.si",
@@ -35,6 +40,11 @@ const translations = {
     password: "Password",
     username: "Username",
     register: "Register",
+    profile: "Profile",
+    orContinueEmail: "Or continue with email",
+    googleLoginFailed: "Google login failed",
+    loginFailed: "Login failed",
+    registrationFailed: "Registration failed",
   },
 };
 
@@ -107,10 +117,18 @@ export function Header() {
             </Button>
 
             {user ? (
-              <Button variant="ghost" size="sm" onClick={logout}>
-                <LogOut className="h-4 w-4 mr-2" />
-                <span className="hidden sm:inline">{t.logout}</span>
-              </Button>
+              <>
+                <Link href="/profile">
+                  <Button variant="ghost" size="sm">
+                    <User className="h-4 w-4 mr-2" />
+                    <span className="hidden sm:inline">{user.username || t.profile}</span>
+                  </Button>
+                </Link>
+                <Button variant="ghost" size="sm" onClick={logout}>
+                  <LogOut className="h-4 w-4 mr-2" />
+                  <span className="hidden sm:inline">{t.logout}</span>
+                </Button>
+              </>
             ) : (
               <Button variant="default" size="sm" onClick={() => setAuthOpen(true)}>
                 <LogIn className="h-4 w-4 mr-2" />

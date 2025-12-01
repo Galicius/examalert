@@ -148,6 +148,47 @@ export async function GET(request) {
     return NextResponse.json({ valid: true, id: user.id, username: user.username, email: user.email });
   }
 
+  // GET /api/user/profile - Get user profile
+  if (pathname === "/api/user/profile") {
+    const user = verifyUserToken(request);
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    await ensureDB();
+
+    try {
+      // Get user details
+      const userRes = await query(
+        "SELECT id, username, email FROM users WHERE id = $1",
+        [user.id]
+      );
+
+      if (userRes.rows.length === 0) {
+        return NextResponse.json({ error: "User not found" }, { status: 404 });
+      }
+
+      // Get active subscriptions
+      const subsRes = await query(
+        "SELECT * FROM subscriptions WHERE email = $1 AND active = TRUE ORDER BY created_at DESC",
+        [user.email]
+      );
+
+      return NextResponse.json({
+        user: userRes.rows[0],
+        subscriptions: subsRes.rows
+      });
+    } catch (error) {
+      console.error("Error fetching profile:", error);
+      return NextResponse.json(
+        { error: "Failed to fetch profile" },
+        { status: 500 }
+      );
+    }
+  }
+
+
+
   // GET /api/questions
   if (pathname === "/api/questions") {
     await ensureDB();
@@ -281,9 +322,219 @@ export async function GET(request) {
   return NextResponse.json({ error: "Not found" }, { status: 404 });
 }
 
+
+
+export async function PUT(request) {
+  const { pathname } = new URL(request.url);
+
+  // PUT /api/user/profile - Update user profile
+  if (pathname === "/api/user/profile") {
+    const user = verifyUserToken(request);
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    await ensureDB();
+
+    try {
+      const body = await request.json();
+      const { username, new_password } = body;
+
+      // Update username
+      if (username && username !== user.username) {
+        // Check availability
+        const check = await query(
+          "SELECT id FROM users WHERE username = $1 AND id != $2",
+          [username, user.id]
+        );
+        if (check.rows.length > 0) {
+          return NextResponse.json(
+            { error: "Username already taken" },
+            { status: 400 }
+          );
+        }
+
+        await query(
+          "UPDATE users SET username = $1 WHERE id = $2",
+          [username, user.id]
+        );
+      }
+
+      // Update password
+      if (new_password) {
+        const passwordHash = await bcrypt.hash(new_password, 10);
+        await query(
+          "UPDATE users SET password_hash = $1 WHERE id = $2",
+          [passwordHash, user.id]
+        );
+      }
+
+      return NextResponse.json({ message: "Profile updated successfully" });
+    } catch (error) {
+      console.error("Error updating profile:", error);
+      return NextResponse.json(
+        { error: "Failed to update profile" },
+        { status: 500 }
+      );
+    }
+  }
+
+  // PUT /api/questions/:id - Update question (admin only)
+  if (pathname.match(/^\/api\/questions\/\d+$/)) {
+    // Verify admin
+    const admin = verifyAdminToken(request);
+    if (!admin) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    await ensureDB();
+
+    try {
+      const questionId = pathname.split("/")[3];
+      const body = await request.json();
+      const {
+        question_text,
+        answer_a,
+        answer_b,
+        answer_c,
+        answer_d,
+        correct_answers,
+        exam_type,
+        category,
+      } = body;
+
+      const result = await query(
+        `UPDATE exam_questions 
+         SET question_text = $1, answer_a = $2, answer_b = $3, answer_c = $4, 
+             answer_d = $5, correct_answers = $6, exam_type = $7, category = $8
+         WHERE id = $9
+         RETURNING *`,
+        [
+          question_text,
+          answer_a,
+          answer_b,
+          answer_c,
+          answer_d,
+          correct_answers,
+          exam_type,
+          category,
+          questionId
+        ]
+      );
+
+      if (result.rows.length === 0) {
+        return NextResponse.json({ error: "Question not found" }, { status: 404 });
+      }
+
+      return NextResponse.json({ question: result.rows[0] });
+    } catch (error) {
+      console.error("Error updating question:", error);
+      return NextResponse.json(
+        { error: "Failed to update question", message: error.message },
+        { status: 500 }
+      );
+    }
+  }
+
+  return NextResponse.json({ error: "Not found" }, { status: 404 });
+}
+
+
 // POST handlers
 export async function POST(request) {
   const { pathname } = new URL(request.url);
+
+  // POST /api/auth/forgot-password - Request password reset
+  if (pathname === "/api/auth/forgot-password") {
+    await ensureDB();
+
+    try {
+      const body = await request.json();
+      const { email } = body;
+
+      if (!email) {
+        return NextResponse.json({ error: "Email required" }, { status: 400 });
+      }
+
+      // Check if user exists
+      const userRes = await query("SELECT id FROM users WHERE email = $1", [email]);
+      if (userRes.rows.length === 0) {
+        // Return success even if email not found to prevent enumeration
+        return NextResponse.json({ message: "If an account exists, a reset link has been sent." });
+      }
+
+      // Generate token
+      const token = crypto.randomBytes(32).toString("hex");
+      const expires = new Date(Date.now() + 3600000); // 1 hour
+
+      // Save token
+      await query(
+        "UPDATE users SET reset_token = $1, reset_token_expires = $2 WHERE email = $3",
+        [token, expires, email]
+      );
+
+      // Send email
+      if (resend) {
+        const resetLink = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/reset-password?token=${token}`;
+        
+        await resend.emails.send({
+          from: "ExamAlert <onboarding@resend.dev>",
+          to: email,
+          subject: "Reset your password",
+          html: `
+            <p>You requested a password reset for ExamAlert.</p>
+            <p>Click the link below to reset your password:</p>
+            <a href="${resetLink}">${resetLink}</a>
+            <p>This link will expire in 1 hour.</p>
+            <p>If you didn't request this, please ignore this email.</p>
+          `
+        });
+      }
+
+      return NextResponse.json({ message: "If an account exists, a reset link has been sent." });
+    } catch (error) {
+      console.error("Error requesting password reset:", error);
+      return NextResponse.json({ error: "Failed to process request" }, { status: 500 });
+    }
+  }
+
+  // POST /api/auth/reset-password - Reset password with token
+  if (pathname === "/api/auth/reset-password") {
+    await ensureDB();
+
+    try {
+      const body = await request.json();
+      const { token, new_password } = body;
+
+      if (!token || !new_password) {
+        return NextResponse.json({ error: "Token and new password required" }, { status: 400 });
+      }
+
+      // Verify token
+      const userRes = await query(
+        "SELECT id FROM users WHERE reset_token = $1 AND reset_token_expires > NOW()",
+        [token]
+      );
+
+      if (userRes.rows.length === 0) {
+        return NextResponse.json({ error: "Invalid or expired token" }, { status: 400 });
+      }
+
+      const userId = userRes.rows[0].id;
+      const passwordHash = await bcrypt.hash(new_password, 10);
+
+      // Update password and clear token
+      await query(
+        "UPDATE users SET password_hash = $1, reset_token = NULL, reset_token_expires = NULL WHERE id = $2",
+        [passwordHash, userId]
+      );
+
+      return NextResponse.json({ message: "Password reset successfully" });
+    } catch (error) {
+      console.error("Error resetting password:", error);
+      return NextResponse.json({ error: "Failed to reset password" }, { status: 500 });
+    }
+  }
 
   // POST /api/auth/register - User registration
   if (pathname === "/api/auth/register") {
@@ -551,6 +802,53 @@ export async function POST(request) {
     }
   }
 
+  // POST /api/auth/send-otp - Send OTP for email verification
+  if (pathname === "/api/auth/send-otp") {
+    await ensureDB();
+
+    try {
+      const body = await request.json();
+      const { email } = body;
+
+      if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        return NextResponse.json(
+          { error: "Valid email required" },
+          { status: 400 }
+        );
+      }
+
+      // Generate 6-digit OTP
+      const otp = Math.floor(100000 + Math.random() * 900000).toString();
+      const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+      await query(
+        `INSERT INTO email_verifications (email, otp, expires_at)
+         VALUES ($1, $2, $3)`,
+        [email, otp, expiresAt]
+      );
+
+      // Send OTP email
+      await resend.emails.send({
+        from: "Vozniski.si <obvestila@vozniski.si>",
+        to: email,
+        subject: "Verification Code - Vozniski.si",
+        html: `
+          <h2>Verification Code</h2>
+          <p>Your verification code is: <strong>${otp}</strong></p>
+          <p>This code will expire in 10 minutes.</p>
+        `,
+      });
+
+      return NextResponse.json({ message: "OTP sent successfully" });
+    } catch (error) {
+      console.error("Error sending OTP:", error);
+      return NextResponse.json(
+        { error: "Failed to send OTP" },
+        { status: 500 }
+      );
+    }
+  }
+
   if (pathname === "/api/subscribe") {
     await ensureDB();
 
@@ -558,11 +856,13 @@ export async function POST(request) {
       const body = await request.json();
       const {
         email,
+        otp,
         filter_obmocje,
         filter_town,
         filter_exam_type,
         filter_tolmac,
         filter_categories,
+        google_token
       } = body;
 
       if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
@@ -570,6 +870,60 @@ export async function POST(request) {
           { error: "Valid email required" },
           { status: 400 }
         );
+      }
+
+      // Check if user is authenticated via header
+      const authUser = verifyUserToken(request);
+      
+      // Verify OTP if not Google login AND not authenticated via header
+      if (!google_token && (!authUser || authUser.email !== email)) {
+        if (!otp) {
+          return NextResponse.json(
+            { error: "OTP required" },
+            { status: 400 }
+          );
+        }
+
+        const verification = await query(
+          `SELECT * FROM email_verifications 
+           WHERE email = $1 AND otp = $2 AND expires_at > NOW() AND verified = FALSE
+           ORDER BY created_at DESC LIMIT 1`,
+          [email, otp]
+        );
+
+        if (verification.rows.length === 0) {
+          return NextResponse.json(
+            { error: "Invalid or expired OTP" },
+            { status: 400 }
+          );
+        }
+
+        // Mark as verified
+        await query(
+          "UPDATE email_verifications SET verified = TRUE WHERE id = $1",
+          [verification.rows[0].id]
+        );
+      }
+
+      // Check/Create User
+      let userResult = await query("SELECT * FROM users WHERE email = $1", [email]);
+      let user;
+
+      if (userResult.rows.length === 0) {
+        // Create new user with random password
+        const randomPassword = crypto.randomBytes(16).toString('hex');
+        const passwordHash = await bcrypt.hash(randomPassword, 10);
+        const username = email.split('@')[0] + '_' + crypto.randomBytes(4).toString('hex');
+
+        const newUser = await query(
+          `INSERT INTO users (email, username, password_hash)
+           VALUES ($1, $2, $3)
+           RETURNING id, email, username`,
+          [email, username, passwordHash]
+        );
+        user = newUser.rows[0];
+      } else {
+        user = userResult.rows[0];
       }
 
       // Generate unique unsubscribe token
@@ -614,11 +968,63 @@ export async function POST(request) {
         `,
       });
 
-      return NextResponse.json({ message: "Subscribed successfully" });
+      // Generate Auth Token
+      const token = jwt.sign(
+        { id: user.id, username: user.username, email: user.email },
+        process.env.JWT_SECRET || "default-secret-key",
+        { expiresIn: "7d" }
+      );
+
+      return NextResponse.json({ 
+        message: "Subscribed successfully",
+        token,
+        user: {
+          id: user.id,
+          username: user.username,
+          email: user.email
+        }
+      });
     } catch (error) {
       console.error("Error subscribing:", error);
       return NextResponse.json(
         { error: "Failed to subscribe" },
+        { status: 500 }
+      );
+    }
+  }
+
+  // DELETE /api/subscriptions/:id
+  if (pathname.match(/^\/api\/subscriptions\/\d+$/) && request.method === "DELETE") {
+    await ensureDB();
+    
+    const user = verifyUserToken(request);
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const id = pathname.split("/").pop();
+
+    try {
+      // Verify ownership
+      const sub = await query(
+        "SELECT * FROM subscriptions WHERE id = $1 AND email = $2",
+        [id, user.email]
+      );
+
+      if (sub.rows.length === 0) {
+        return NextResponse.json(
+          { error: "Subscription not found" },
+          { status: 404 }
+        );
+      }
+
+      await query("DELETE FROM subscriptions WHERE id = $1", [id]);
+
+      return NextResponse.json({ message: "Subscription deleted" });
+    } catch (error) {
+      console.error("Error deleting subscription:", error);
+      return NextResponse.json(
+        { error: "Failed to delete subscription" },
         { status: 500 }
       );
     }
@@ -944,82 +1350,6 @@ export async function POST(request) {
         { status: 500 }
       );
     }
-  }
-
-  return NextResponse.json({ error: "Not found" }, { status: 404 });
-}
-
-// PUT /api/questions/:id - Update question (admin only)
-export async function PUT(request) {
-  const { pathname } = new URL(request.url);
-
-  if (pathname.match(/^\/api\/questions\/\d+$/)) {
-    // Verify admin
-    const admin = verifyAdminToken(request);
-    if (!admin) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    await ensureDB();
-
-    try {
-      const questionId = pathname.split("/")[3];
-      const body = await request.json();
-      const {
-        question_text,
-        answer_a,
-        answer_b,
-        answer_c,
-        answer_d,
-        correct_answers,
-        exam_type,
-        category,
-      } = body;
-
-      const result = await query(
-        `UPDATE exam_questions 
-         SET question_text = $1, answer_a = $2, answer_b = $3, answer_c = $4, 
-             answer_d = $5, correct_answers = $6, exam_type = $7, category = $8
-         WHERE id = $9
-         RETURNING *`,
-        [
-          question_text,
-          answer_a,
-          answer_b,
-          answer_c,
-          answer_d,
-          correct_answers,
-          exam_type,
-          category,
-          questionId,
-        ]
-      );
-
-      if (result.rows.length === 0) {
-        return NextResponse.json(
-          { error: "Question not found" },
-          { status: 404 }
-        );
-      }
-
-      return NextResponse.json({ question: result.rows[0] });
-    } catch (error) {
-      console.error("Error updating question:", error);
-      return NextResponse.json(
-        { error: "Failed to update question", message: error.message },
-        { status: 500 }
-      );
-    }
-  }
-
-  return NextResponse.json({ error: "Not found" }, { status: 404 });
-}
-
-// DELETE /api/questions/:id - Delete question (admin only)
-export async function DELETE(request) {
-  const { pathname } = new URL(request.url);
-
-  if (pathname.match(/^\/api\/questions\/\d+$/)) {
     // Verify admin
     const admin = verifyAdminToken(request);
     if (!admin) {

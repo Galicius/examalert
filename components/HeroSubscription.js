@@ -6,7 +6,7 @@ import { useSettings } from "@/lib/settings";
 
 const translations = {
   sl: {
-    heroTitle: "Nikoli več ne zamudite prostega termina",
+    heroTitle: "Hitreje se prijavi na izpit",
     heroSubtitle: "Prejemajte takojšnja obvestila, ko se sprosti termin za vozniški izpit v vašem kraju.",
     subscribe: "Naroči se na obvestila",
     features: [
@@ -16,7 +16,7 @@ const translations = {
     ]
   },
   en: {
-    heroTitle: "Never Miss a Driving Exam Slot Again",
+    heroTitle: "Book you exam fast",
     heroSubtitle: "Get instant notifications when a driving exam slot becomes available in your area.",
     subscribe: "Subscribe to Notifications",
     features: [

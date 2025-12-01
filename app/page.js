@@ -36,89 +36,7 @@ import { useSettings } from "@/lib/settings";
 import { HeroSubscription } from "@/components/HeroSubscription";
 import { useAuth } from "@/lib/auth";
 import { GoogleLogin } from "@react-oauth/google";
-
-const OBMOCJE_MAP = {
-  1: [
-    "Ajdovščina",
-    "Idrija",
-    "Ilirska Bistrica",
-    "Koper",
-    "Nova Gorica",
-    "Postojna",
-    "Sežana",
-    "Tolmin",
-  ],
-  2: ["Domžale", "Ig", "Jesenice", "Kranj", "Ljubljana", "Vrhnika"],
-  3: [
-    "Celje",
-    "Laško",
-    "Ločica ob Savinji",
-    "Ravne na Koroškem",
-    "Slovenske Konjice",
-    "Slovenj Gradec",
-    "Šentjur",
-    "Šmarje pri Jelšah",
-    "Trbovlje",
-    "Velenje",
-  ],
-  4: ["Brežice", "Črnomelj", "Kočevje", "Krško", "Novo mesto", "Sevnica"],
-  5: ["Maribor", "Murska Sobota", "Ormož", "Ptuj", "Slovenska Bistrica"],
-};
-
-const ADDRESS_MAP = {
-  // ===== OBMOČJE 1 =====
-  Ajdovščina: "Tovarniška cesta 26, Ajdovščina",
-  Idrija: "Mestni trg 2, Idrija",
-  "Ilirska Bistrica": "Šercerjeva cesta 17, Ilirska Bistrica",
-  Koper: "Ljubljanska cesta 6, Koper",
-  "Nova Gorica": "Trg Edvarda Kardelja 1, Nova Gorica",
-  Postojna: "Kazarje 10 (EPIC), Postojna",
-  Sežana: "Ulica Mirka Pirca 4, Sežana",
-  Tolmin: "Tumov drevored 4, Tolmin",
-
-  // ===== OBMOČJE 2 =====
-  Domžale: "Ljubljanska cesta 71, Domžale",
-  Ig: "Ig",
-  Jesenice: "Cesta železarjev 6a, Jesenice",
-  Kranj: "Kolodvorska cesta 5, Kranj",
-  Ljubljana: "Cesta dveh cesarjev 176, Ljubljana",
-  Vrhnika: "Vrhnika",
-
-  // ===== OBMOČJE 3 =====
-  Celje: "Cesta v Celje 14, Ljubečna",
-  Laško: "Poženelova ulica 22, Laško",
-  "Ločica ob Savinji": "Ločica ob Savinji 49, Ločica ob Savinji",
-  "Ravne na Koroškem": "Čečovje 12a, Ravne na Koroškem",
-  "Slovenske Konjice": "Tattenbachova ulica 2a, Slovenske Konjice",
-  "Slovenj Gradec": "Meškova ulica 21, Slovenj Gradec",
-  Šentjur: "Cesta na kmetijsko šolo 9, Šentjur",
-  "Šmarje pri Jelšah": "Obrtniška ulica 4, Šmarje pri Jelšah",
-  Trbovlje: "Mestni trg 4, Trbovlje",
-  Velenje: "Koroška cesta 62a, Velenje",
-
-  // ===== OBMOČJE 4 =====
-  Brežice: "Izobraževalno vadbeni center, Bizeljska cesta 45, Brežice",
-  Črnomelj: "Ulica Otona Župančiča 4, Črnomelj",
-  Kočevje: "Cesta na stadion 7, Kočevje",
-  Krško: "Cesta krških žrtev 131, Krško",
-  "Novo mesto": "Podbevškova ulica 10, Novo mesto",
-  Sevnica: "Savska cesta 20b, Sevnica",
-
-  // ===== OBMOČJE 5 =====
-  Maribor: "Ptujska cesta 184, Maribor",
-  "Murska Sobota": "Noršinska ulica 10, Murska Sobota",
-  Ormož: "Ljutomerska cesta 30, Ormož",
-  Ptuj: "Ormoška cesta 26, Ptuj",
-  "Slovenska Bistrica": "Žolgarjeva ulica 2, Slovenska Bistrica",
-};
-
-const CATEGORY_GROUPS = [
-  ["AM", "A1", "A2", "A"],
-  ["B1", "B", "BE"],
-  ["C1", "C", "C1E", "CE"],
-  ["D1", "D", "D1E", "DE"],
-  ["F"],
-];
+import { OBMOCJE_MAP, ADDRESS_MAP, CATEGORY_GROUPS } from "@/lib/constants";
 
 const translations = {
   sl: {
@@ -185,9 +103,9 @@ const translations = {
   },
 };
 
-export default function App() {
+export default function Home() {
   const { lang } = useSettings();
-  const { loginWithGoogle } = useAuth();
+  const { user } = useAuth();
   const [slots, setSlots] = useState([]);
   const [loading, setLoading] = useState(true);
   const [lastScraped, setLastScraped] = useState(null);
@@ -303,68 +221,174 @@ export default function App() {
     }
   };
 
+  const [otpSent, setOtpSent] = useState(false);
+  const [otp, setOtp] = useState("");
+  const [googleToken, setGoogleToken] = useState(null);
+  const [resendCooldown, setResendCooldown] = useState(0);
+
+  useEffect(() => {
+    let timer;
+    if (resendCooldown > 0) {
+      timer = setInterval(() => {
+        setResendCooldown((prev) => prev - 1);
+      }, 1000);
+    }
+    return () => clearInterval(timer);
+  }, [resendCooldown]);
+
+  const handleResendOtp = async () => {
+    if (resendCooldown > 0) return;
+    
+    setSubError("");
+    try {
+      const res = await fetch("/api/auth/send-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: subscribeEmail }),
+      });
+      
+      if (res.ok) {
+        setResendCooldown(30); // 30 seconds cooldown
+      } else {
+        const data = await res.json();
+        setSubError(data.error || "Failed to resend verification code");
+      }
+    } catch (error) {
+      setSubError("An error occurred");
+    }
+  };
+
   const handleSubscribe = async () => {
     setSubError("");
     
+    // If logged in, use user email
+    const emailToUse = user ? user.email : subscribeEmail;
+
     // Validation
-    if (!subscribeEmail || !subCategory || !subExamType || (!subRegion && !subTown)) {
+    if (!emailToUse || !subCategory || !subExamType || (!subRegion && !subTown)) {
       setSubError(t.validationError);
       return;
     }
 
     setSubscribing(true);
     try {
-      const res = await fetch("/api/subscribe", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: subscribeEmail,
-          filter_obmocje: subRegion ? parseInt(subRegion) : null,
-          filter_town: subTown || null,
-          filter_exam_type: subExamType,
-          filter_categories: subCategory,
-          filter_tolmac: subTolmac,
-        }),
-      });
-
-      if (res.ok) {
-        setSubscribeSuccess(true);
-        setTimeout(() => {
-          setSubscribeOpen(false);
-          setSubscribeSuccess(false);
-          setSubscribeEmail("");
-          setSubCategory("");
-          setSubRegion("");
-          setSubTown("");
-        }, 2000);
+      // If logged in, subscribe directly
+      if (user) {
+        await performSubscription({ email: user.email });
+        return;
       }
+
+      // If Google Token is present, subscribe directly
+      if (googleToken) {
+        await performSubscription({ google_token: googleToken });
+        return;
+      }
+
+      // If OTP not sent yet, send it
+      if (!otpSent) {
+        const res = await fetch("/api/auth/send-otp", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: subscribeEmail }),
+        });
+        
+        if (res.ok) {
+          setOtpSent(true);
+          setResendCooldown(30);
+        } else {
+          const data = await res.json();
+          setSubError(data.error || "Failed to send verification code");
+        }
+        setSubscribing(false);
+        return;
+      }
+
+      // If OTP sent, verify and subscribe
+      if (!otp) {
+        setSubError("Please enter the verification code");
+        setSubscribing(false);
+        return;
+      }
+
+      await performSubscription({ otp });
+
     } catch (error) {
       console.error("Error subscribing:", error);
-    } finally {
+      setSubError("An error occurred");
       setSubscribing(false);
     }
   };
 
+  const performSubscription = async (extraData = {}) => {
+    const emailToUse = user ? user.email : subscribeEmail;
+    
+    const token = localStorage.getItem('auth_token');
+    const headers = { "Content-Type": "application/json" };
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
+    }
+
+    const res = await fetch("/api/subscribe", {
+      method: "POST",
+      headers: headers,
+      body: JSON.stringify({
+        email: emailToUse,
+        filter_obmocje: subRegion ? parseInt(subRegion) : null,
+        filter_town: subTown || null,
+        filter_exam_type: subExamType,
+        filter_categories: subCategory,
+        filter_tolmac: subTolmac,
+        ...extraData
+      }),
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      
+      // If we got a token, login the user
+      if (data.token) {
+        localStorage.setItem('auth_token', data.token);
+        // We might need to refresh auth state here, but a page reload or simple state update works
+        window.location.reload(); // Simple way to refresh auth state
+      }
+
+      setSubscribeSuccess(true);
+      setTimeout(() => {
+        setSubscribeOpen(false);
+        setSubscribeSuccess(false);
+        setSubscribeEmail("");
+        setSubCategory("");
+        setSubRegion("");
+        setSubTown("");
+        setOtpSent(false);
+        setOtp("");
+        setGoogleToken(null);
+      }, 2000);
+    } else {
+      const data = await res.json();
+      setSubError(data.error || "Subscription failed");
+    }
+    setSubscribing(false);
+  };
+
   const handleGoogleSubscription = async (credentialResponse) => {
     if (credentialResponse.credential) {
-      const result = await loginWithGoogle(credentialResponse.credential);
+      setGoogleToken(credentialResponse.credential);
       
-      if (result.success) {
-        try {
-          // Simple JWT decode
-          const base64Url = credentialResponse.credential.split('.')[1];
-          const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-          const jsonPayload = decodeURIComponent(window.atob(base64).split('').map(function(c) {
-              return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-          }).join(''));
-          const payload = JSON.parse(jsonPayload);
-          
-          if (payload.email) {
-            setSubscribeEmail(payload.email);
-          }
-        } catch (e) {
-          console.error("Failed to decode Google token", e);
+      // Decode to get email
+      try {
+        const base64Url = credentialResponse.credential.split('.')[1];
+        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+        const jsonPayload = decodeURIComponent(window.atob(base64).split('').map(function(c) {
+            return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+        }).join(''));
+        const payload = JSON.parse(jsonPayload);
+        
+        if (payload.email) {
+          setSubscribeEmail(payload.email);
         }
+      } catch (e) {
+        console.error("Failed to decode Google token", e);
       }
     }
   };
@@ -772,35 +796,77 @@ export default function App() {
             </div>
           ) : (
             <div className="space-y-4 mt-4">
-              <div className="flex justify-center mb-4">
-                <GoogleLogin
-                  onSuccess={handleGoogleSubscription}
-                  onError={() => setSubError('Google login failed')}
-                  theme="filled_blue"
-                  shape="pill"
-                  width="100%"
-                  text="continue_with"
-                />
-              </div>
+              {!user && (
+                <>
+                  <div className="flex justify-center mb-4">
+                    <GoogleLogin
+                      onSuccess={handleGoogleSubscription}
+                      onError={() => setSubError('Google login failed')}
+                      theme="filled_blue"
+                      shape="pill"
+                      width="100%"
+                      text="continue_with"
+                    />
+                  </div>
 
-              <div className="relative mb-4">
-                <div className="absolute inset-0 flex items-center">
-                  <span className="w-full border-t" />
-                </div>
-                <div className="relative flex justify-center text-xs uppercase">
-                  <span className="bg-background px-2 text-muted-foreground">Or continue with email</span>
-                </div>
-              </div>
+                  <div className="relative mb-4">
+                    <div className="absolute inset-0 flex items-center">
+                      <span className="w-full border-t" />
+                    </div>
+                    <div className="relative flex justify-center text-xs uppercase">
+                      <span className="bg-background px-2 text-muted-foreground">Or continue with email</span>
+                    </div>
+                  </div>
 
-              <div className="space-y-2">
-                <Label>{t.email} <span className="text-red-500">*</span></Label>
-                <Input
-                  type="email"
-                  value={subscribeEmail}
-                  onChange={(e) => setSubscribeEmail(e.target.value)}
-                  placeholder="vas@email.si"
-                />
-              </div>
+                  <div className="space-y-2">
+                    <Label>{t.email} <span className="text-red-500">*</span></Label>
+                    <Input
+                      type="email"
+                      value={subscribeEmail}
+                      onChange={(e) => setSubscribeEmail(e.target.value)}
+                      placeholder="vas@email.si"
+                      disabled={otpSent || !!googleToken}
+                    />
+                  </div>
+
+                  {otpSent && (
+                    <div className="space-y-2 animate-in fade-in slide-in-from-top-2">
+                      <Label>Verification Code <span className="text-red-500">*</span></Label>
+                      <Input
+                        type="text"
+                        value={otp}
+                        onChange={(e) => setOtp(e.target.value)}
+                        placeholder="Enter 6-digit code"
+                        maxLength={6}
+                        className="tracking-widest text-center text-lg"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Check your email for the verification code.
+                      </p>
+                      <div className="flex justify-end">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="text-xs h-auto p-0 text-muted-foreground hover:text-primary"
+                          onClick={handleResendOtp}
+                          disabled={resendCooldown > 0}
+                        >
+                          {resendCooldown > 0 
+                            ? `Resend code in ${resendCooldown}s` 
+                            : "Resend Code"}
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+
+              {user && (
+                <div className="bg-muted/50 p-3 rounded-md mb-4 text-sm">
+                  Subscribing as <strong>{user.email}</strong>
+                </div>
+              )}
 
               <div className="space-y-2">
                 <Label>{t.examType} <span className="text-red-500">*</span></Label>
@@ -930,7 +996,7 @@ export default function App() {
                     {t.loading}
                   </>
                 ) : (
-                  t.subscribeBtn
+                  user ? t.subscribeBtn : (otpSent ? "Verify & Subscribe" : (googleToken ? t.subscribeBtn : "Send Verification Code"))
                 )}
               </Button>
             </div>

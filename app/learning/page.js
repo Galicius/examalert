@@ -37,6 +37,10 @@ const translations = {
     password: "Geslo",
     login: "Prijava",
     register: "Registracija",
+    orContinueEmail: "Ali nadaljujte z e-pošto",
+    googleLoginFailed: "Prijava z Google ni uspela",
+    loginFailed: "Prijava ni uspela",
+    registrationFailed: "Registracija ni uspela",
   },
   en: {
     title: "Group Learning",
@@ -62,6 +66,10 @@ const translations = {
     password: "Password",
     login: "Login",
     register: "Register",
+    orContinueEmail: "Or continue with email",
+    googleLoginFailed: "Google login failed",
+    loginFailed: "Login failed",
+    registrationFailed: "Registration failed",
   },
 };
 

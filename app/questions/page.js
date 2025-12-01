@@ -71,6 +71,10 @@ const translations = {
     login: "Prijava",
     register: "Registracija",
     learning: "Učenje",
+    orContinueEmail: "Ali nadaljujte z e-pošto",
+    googleLoginFailed: "Prijava z Google ni uspela",
+    loginFailed: "Prijava ni uspela",
+    registrationFailed: "Registracija ni uspela",
   },
   en: {
     title: "Exam Questions",
@@ -114,6 +118,10 @@ const translations = {
     login: "Login",
     register: "Register",
     learning: "Learning",
+    orContinueEmail: "Or continue with email",
+    googleLoginFailed: "Google login failed",
+    loginFailed: "Login failed",
+    registrationFailed: "Registration failed",
   },
 };
 
