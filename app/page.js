@@ -105,7 +105,7 @@ const translations = {
 
 export default function Home() {
   const { lang } = useSettings();
-  const { user } = useAuth();
+  const { user, loginWithGoogle } = useAuth();
   const [slots, setSlots] = useState([]);
   const [loading, setLoading] = useState(true);
   const [lastScraped, setLastScraped] = useState(null);
@@ -373,22 +373,10 @@ export default function Home() {
 
   const handleGoogleSubscription = async (credentialResponse) => {
     if (credentialResponse.credential) {
-      setGoogleToken(credentialResponse.credential);
+      const result = await loginWithGoogle(credentialResponse.credential);
       
-      // Decode to get email
-      try {
-        const base64Url = credentialResponse.credential.split('.')[1];
-        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-        const jsonPayload = decodeURIComponent(window.atob(base64).split('').map(function(c) {
-            return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-        }).join(''));
-        const payload = JSON.parse(jsonPayload);
-        
-        if (payload.email) {
-          setSubscribeEmail(payload.email);
-        }
-      } catch (e) {
-        console.error("Failed to decode Google token", e);
+      if (!result.success) {
+        setSubError('Google login failed');
       }
     }
   };

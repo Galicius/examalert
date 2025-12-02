@@ -875,8 +875,30 @@ export async function POST(request) {
       // Check if user is authenticated via header
       const authUser = verifyUserToken(request);
       
+      // Verify Google Token if provided
+      if (google_token) {
+        try {
+          const ticket = await googleClient.verifyIdToken({
+            idToken: google_token,
+            audience: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID,
+          });
+          const payload = ticket.getPayload();
+          if (payload.email !== email) {
+            return NextResponse.json(
+              { error: "Google token email does not match provided email" },
+              { status: 400 }
+            );
+          }
+        } catch (error) {
+          console.error("Error verifying Google token:", error);
+          return NextResponse.json(
+            { error: "Invalid Google token" },
+            { status: 400 }
+          );
+        }
+      } 
       // Verify OTP if not Google login AND not authenticated via header
-      if (!google_token && (!authUser || authUser.email !== email)) {
+      else if (!authUser || authUser.email !== email) {
         if (!otp) {
           return NextResponse.json(
             { error: "OTP required" },
